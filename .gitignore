@@ -1,0 +1,5 @@
+TODELETE.py
+*.zip
+pacs
+wandb
+__pycahce__
