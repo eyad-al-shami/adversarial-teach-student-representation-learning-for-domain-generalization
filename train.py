@@ -63,6 +63,8 @@ def training_validation_loop(cfg, m_monitor, logger):
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
+        if cfg.DEBUG:
+            break
 
 def ema(teacher, student, tau):
     with torch.no_grad():
