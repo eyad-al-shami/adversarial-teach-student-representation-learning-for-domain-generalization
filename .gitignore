@@ -1,5 +1,5 @@
 TODELETE.py
 *.zip
-pacs
+pacs/
 wandb
-**/__pycache__/
+**/__pycache__

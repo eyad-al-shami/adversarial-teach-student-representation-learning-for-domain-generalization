@@ -42,15 +42,21 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     classifier.unfreeze()
     backbone.train()
     classifier.train()
-    warmup_model = torch.nn.Sequential(backbone, classifier)
+    # warmup_model = torch.nn.Sequential(backbone, classifier)
     # move to GPU if available
     if (cfg.USE_CUDA):
-        warmup_model = warmup_model.to(cfg.DEVICE)
+        backbone = backbone.to(cfg.DEVICE)
+        classifier = classifier.to(cfg.DEVICE)
+        # warmup_model = warmup_model.to(cfg.DEVICE)
         for m in m_monitor.metrics.values():
             m.to(cfg.DEVICE)
 
     criterion = torch.nn.CrossEntropyLoss()
-    optimizer = optim.SGD(warmup_model.parameters(), lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
+    
+    # get the parameters of both the backbone and the classifier
+    merged_parameters = list(backbone.parameters()) + list(classifier.parameters())
+
+    optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
 
     _, train_loader = get_dataset(cfg, phase)
 
