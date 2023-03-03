@@ -66,13 +66,13 @@ def training_validation_loop(cfg, logger):
                 # 2.1. Update the student
                 student, rl_loss = representation_learning_batch_training(augmenter, teacher, student, classifier, batch)
                 with torch.no_grad():
-                    metrics_monitors["rl_monitor"].metrics["loss"](rl_loss.item())
+                    metrics_monitors["rl_monitor"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
                 augmenter, aug_loss = domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch)
                 with torch.no_grad():
-                    metrics_monitors["aug__monitor"].metrics["loss"](aug_loss.item())
+                    metrics_monitors["aug__monitor"].metrics["loss"](aug_loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_loss=aug_loss)
             logger.log({"rl_loss":metrics_monitors["rl_monitor"].metrics["loss"].compute(), "aug_loss": metrics_monitors["aug__monitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
@@ -126,7 +126,7 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     m_monitor.reset()
     return backbone, classifier
 
-def representation_learning_batch_training(augmenter, teacher, student, classifier, batch, m_monitor):
+def representation_learning_batch_training(augmenter, teacher, student, classifier, batch):
     
     # freeze the augmenter and the teacher (we freeze the teacher because we will update it using EMA)
     augmenter.freeze()
@@ -158,7 +158,7 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     
     return student, loss.item()
 
-def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch, m_monitor):
+def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch):
     # unfreeze the augmenter
     augmenter.train()
     augmenter.unfreeze()
