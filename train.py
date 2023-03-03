@@ -27,11 +27,14 @@ def create_componenets(cfg):
     classifier = net.ClassifierLayer(cfg=cfg)
     return augmenter, teacher, student, classifier
 
-def training_validation_loop(cfg, m_monitor, logger):
-    augmenter, teacher, student, classifier = create_componenets(cfg)
+def training_validation_loop(cfg, logger):
     
-
     phase = 'training'
+    # create the components of the learning framework
+    augmenter, teacher, student, classifier = create_componenets(cfg)
+    # create the metrics monitor
+    metrics_monitors = {"warmup_m_monitor": net.Metrics_Monitor(cfg), "rep_lern_m_monitor": net.Metrics_Monitor(cfg), "domain_augm": net.Metrics_Monitor(cfg)}
+    # get the dataloader
     _, train_loader = get_dataset(cfg, phase)
 
     # move modules to GPU if available
@@ -40,19 +43,17 @@ def training_validation_loop(cfg, m_monitor, logger):
         teacher = teacher.to(cfg.DEVICE)
         student = student.to(cfg.DEVICE)
         classifier = classifier.to(cfg.DEVICE)
-        for m in m_monitor.metrics.values():
-            m.to(cfg.DEVICE)
-    
-    metrics_monitors = {"warmup_m_monitor": net.Metrics_Monitor(cfg), "rep_lern_m_monitor": net.Metrics_Monitor(cfg), "domain_augm": net.Metrics_Monitor(cfg)}
-
+        # move the metrics modules to the GPU
+        for mm in metrics_monitors.values():
+            for m in mm.metrics.values():
+                m.to(cfg.DEVICE)
     
     # 1. Warmup
     teacher, classifier = warmup(cfg, teacher, classifier, metrics_monitors["warmup_m_monitor"], logger)
-
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
         # reset the metrics
-        for m in m_monitor.metrics.values():
+        for m in metrics_monitors.values():
             m.reset()
 
         with tqdm(train_loader, unit="batch") as tepoch:
@@ -62,7 +63,7 @@ def training_validation_loop(cfg, m_monitor, logger):
                     data, target = data.to(cfg.DEVICE), target.to(cfg.DEVICE)
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, loss = representation_learning_batch_training(augmenter, teacher, student, classifier, {"data": data, "target": target, "domains": domains}, metrics_monitors["rep_lern_m_monitor"], logger)
+                student, loss = representation_learning_batch_training(augmenter, teacher, student, classifier, {"data": data, "target": target, "domains": domains}, metrics_monitors["rep_lern_m_monitor"])
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
@@ -118,7 +119,7 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     m_monitor.reset()
     return backbone, classifier
 
-def representation_learning_batch_training(augmenter, teacher, student, classifier, batch, m_monitor, logger):
+def representation_learning_batch_training(augmenter, teacher, student, classifier, batch, m_monitor):
     
     # freeze the augmenter and the teacher (we freeze the teacher because we will update it using EMA)
     augmenter.freeze()
@@ -206,7 +207,6 @@ if __name__ == '__main__':
     utils.set_random_seed(cfg.SEED)
     print(cfg)
     logger = utils.set_logger(cfg)
-    
     training_validation_loop(cfg, logger)
 
 
