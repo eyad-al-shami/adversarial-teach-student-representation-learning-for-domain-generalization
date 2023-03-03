@@ -117,7 +117,7 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     teacher.train()
     student.train()
 
-    optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
+    optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
     # discrepancy_loss is the magnitude of the difference between the teacher and the student normalized outputs
     discripancy_loss = torch.linalg.vector_norm
