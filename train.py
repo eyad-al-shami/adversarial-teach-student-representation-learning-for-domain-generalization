@@ -52,7 +52,7 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
             m.to(cfg.DEVICE)
 
     criterion = torch.nn.CrossEntropyLoss()
-    
+
     # get the parameters of both the backbone and the classifier
     merged_parameters = list(backbone.parameters()) + list(classifier.parameters())
 
@@ -67,7 +67,10 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
                 if (cfg.USE_CUDA):
                     data, target = data.to(cfg.DEVICE), target.to(cfg.DEVICE)
                 optimizer.zero_grad()
-                output = warmup_model(data)
+
+                # computing the output
+                output = classifier(backbone(data))
+                
                 loss = criterion(output, target)
                 loss.backward()
                 optimizer.step()
