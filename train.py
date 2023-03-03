@@ -6,8 +6,7 @@ from configs import setup_cfg
 import torch
 import torch.optim as optim
 from tqdm import tqdm
-import wandb
-from torch.utils.tensorboard import SummaryWriter
+
 import utils
 import model.net as net
 from data import get_dataset
@@ -31,7 +30,29 @@ def create_componenets(cfg):
 def training_validation_loop(cfg, m_monitor, logger):
     augmenter, teacher, student, classifier = create_componenets(cfg)
     # 1. Warmup
-    warmup(cfg, teacher, classifier, m_monitor, logger)
+    teacher, classifier = warmup(cfg, teacher, classifier, m_monitor, logger)
+
+    phase = 'training'
+    _, train_loader = get_dataset(cfg, phase)
+
+    # 2 and 3 Representation Learning and Distillation
+    for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
+        with tqdm(train_loader, unit="batch") as tepoch:
+            for data, domains, target in tepoch:
+                tepoch.set_description(f"Epoch {epoch}")
+                if (cfg.USE_CUDA):
+                    data, target = data.to(cfg.DEVICE), target.to(cfg.DEVICE)
+                # 2. Representation Learning
+                # 2.1. Update the student
+                student = representation_learning_batch_training(augmenter, teacher, student, classifier, {data: data, target: target, domains: domains}, m_monitor, logger)
+                # 2.2. Update the teacher
+                teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
+
+def ema(teacher, student, tau):
+    with torch.no_grad():
+        for teacher_param, student_param in zip(teacher.parameters(), student.parameters()):
+            teacher_param.data.copy_(teacher_param.data * (1.0 - tau) + student_param.data * tau)
+    return teacher
 
 def warmup(cfg, backbone, classifier, m_monitor, logger):
     phase = 'warmup'
@@ -45,14 +66,11 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     if (cfg.USE_CUDA):
         backbone = backbone.to(cfg.DEVICE)
         classifier = classifier.to(cfg.DEVICE)
-        # warmup_model = warmup_model.to(cfg.DEVICE)
         for m in m_monitor.metrics.values():
             m.to(cfg.DEVICE)
 
-
-
     # get the parameters of both the backbone and the classifier
-    merged_parameters = list(backbone.parameters()) + list(classifier.parameters())
+    merged_parameters = utils.merge_parameters([backbone, classifier])
 
     optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
@@ -82,16 +100,46 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     m_monitor.reset()
     return backbone, classifier
 
-def set_logger(cfg):
-    if cfg.LOGGING.WANDB.ENABLE:
-        run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.EXPERIMENT_NAME, config=cfg)
-        logger = wandb
-    elif cfg.LOGGING.TENSORBOARD.ENABLE:
-        logger = SummaryWriter()
-    return logger
+def representation_learning_batch_training(augmenter, teacher, student, classifier, batch, m_monitor, logger):
+    # move to GPU if available
+    if (cfg.USE_CUDA):
+        augmenter = augmenter.to(cfg.DEVICE)
+        teacher = teacher.to(cfg.DEVICE)
+        student = student.to(cfg.DEVICE)
+        classifier = classifier.to(cfg.DEVICE)
+        for m in m_monitor.metrics.values():
+            m.to(cfg.DEVICE)
 
-def representation_learning():
-    pass
+    # freeze the augmenter and the teacher (we freeze the teacher because we will update it using EMA)
+    augmenter.freeze()
+    teacher.freeze() # No need to accumulate gradients to make training faster
+    # put teacher and student in train mode
+    teacher.train()
+    student.train()
+
+    optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
+    cross_entropy_loss = torch.nn.CrossEntropyLoss()
+    # discrepancy_loss is the magnitude of the difference between the teacher and the student normalized outputs
+    discripancy_loss = torch.linalg.vector_norm
+
+    # first pass the input through the augmenter and the teacher
+    augmented_data = augmenter(batch['data'])
+    teacher_output = teacher(batch['data'])
+    # then pass the augmented_data through the student
+    student_output = student(augmented_data)
+    # compute the discrepancy loss between the teacher and the student
+    discrepancy = discripancy_loss(teacher_output - student_output, dim=1)
+    # compute the cross entropy loss between the student output and the target
+    cross_entropy = cross_entropy_loss(student_output, batch['target'])
+    # compute the total loss and update the student
+    loss = cross_entropy + discrepancy
+    loss.backward()
+    optimizer.step()
+    # use EMA to update the teacher
+
+    return student
+
+
 
 def domain_augmentation():
     pass
@@ -109,9 +157,8 @@ if __name__ == '__main__':
     cfg = setup_cfg(args)
     # Set the random seed for reproducible experiments
     utils.set_random_seed(cfg.SEED)
-
     print(cfg)
-    logger = set_logger(cfg)
+    logger = utils.set_logger(cfg)
     m_monitor = net.Metrics_Monitor(cfg)
     training_validation_loop(cfg, m_monitor, logger)
 

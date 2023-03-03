@@ -4,6 +4,8 @@ import os
 import shutil
 import random
 import numpy as np
+import wandb
+from torch.utils.tensorboard import SummaryWriter
 
 def set_random_seed(seed):
     random.seed(seed)
@@ -16,6 +18,21 @@ def get_readable_date_time():
     now = datetime.datetime.now()
     return now.strftime("%Y-%m-%d_%H-%M-%S")
 
+def merge_parameters(models):
+    """Merge the parameters of the models in the list models into a single list of parameters.
+    """
+    params = []
+    for model in models:
+        params += list(model.parameters())
+    return params
+
+def set_logger(cfg):
+    if cfg.LOGGING.WANDB.ENABLE:
+        run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.EXPERIMENT_NAME, config=cfg)
+        logger = wandb
+    elif cfg.LOGGING.TENSORBOARD.ENABLE:
+        logger = SummaryWriter()
+    return logger
 class RunningAverage():
     """A simple class that maintains the running average of a quantity
     
