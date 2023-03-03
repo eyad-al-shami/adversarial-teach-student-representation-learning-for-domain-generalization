@@ -69,7 +69,7 @@ def training_validation_loop(cfg, logger):
                 # 3. update the augmenter
 
                 tepoch.set_postfix(rep_lear_loss=loss)
-            logger.log({"rep_learn_loss":metrics_monitors["rep_lern_m_monitor"]["loss"].compute(), "epoch": epoch, "phase": phase})
+            logger.log({"rep_learn_loss":metrics_monitors["rep_lern_m_monitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
         if cfg.DEBUG:
             break
 
