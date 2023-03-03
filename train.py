@@ -43,8 +43,11 @@ def training_validation_loop(cfg, m_monitor, logger):
         for m in m_monitor.metrics.values():
             m.to(cfg.DEVICE)
     
+    metrics_monitors = {"warmup_m_monitor": net.Metrics_Monitor(cfg), "rep_lern_m_monitor": net.Metrics_Monitor(cfg), "domain_augm": net.Metrics_Monitor(cfg)}
+
+    
     # 1. Warmup
-    teacher, classifier = warmup(cfg, teacher, classifier, m_monitor, logger)
+    teacher, classifier = warmup(cfg, teacher, classifier, metrics_monitors["warmup_m_monitor"], logger)
 
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
@@ -59,10 +62,13 @@ def training_validation_loop(cfg, m_monitor, logger):
                     data, target = data.to(cfg.DEVICE), target.to(cfg.DEVICE)
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student = representation_learning_batch_training(augmenter, teacher, student, classifier, {"data": data, "target": target, "domains": domains}, m_monitor, logger)
+                student, loss = representation_learning_batch_training(augmenter, teacher, student, classifier, {"data": data, "target": target, "domains": domains}, metrics_monitors["rep_lern_m_monitor"], logger)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
+
+                tepoch.set_postfix(rep_lear_loss=loss)
+            logger.log({"rep_learn_loss":metrics_monitors["rep_lern_m_monitor"]["loss"].compute(), "epoch": epoch, "phase": phase})
         if cfg.DEBUG:
             break
 
@@ -141,8 +147,10 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     optimizer.step()
     # zero the gradients
     optimizer.zero_grad()
+    with torch.no_grad():
+        m_monitor.metrics["loss"](loss.item())
 
-    return student
+    return student, loss.item()
 
 def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch, m_monitor, logger):
     # unfreeze the augmenter
@@ -198,8 +206,8 @@ if __name__ == '__main__':
     utils.set_random_seed(cfg.SEED)
     print(cfg)
     logger = utils.set_logger(cfg)
-    m_monitor = net.Metrics_Monitor(cfg)
-    training_validation_loop(cfg, m_monitor, logger)
+    
+    training_validation_loop(cfg, logger)
 
 
 
