@@ -134,7 +134,7 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     # compute the discrepancy loss between the teacher and the student
     with torch.no_grad():
         print(teacher_output.shape)
-    discrepancy = discripancy_loss(teacher_output - student_output, dim=1)
+    discrepancy = discripancy_loss(teacher_output - student_output, dim=1).sum()
     with torch.no_grad():
         print(discrepancy.shape)
     # compute the cross entropy loss between the student output and the target
