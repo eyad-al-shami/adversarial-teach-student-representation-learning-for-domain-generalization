@@ -46,6 +46,10 @@ def training_validation_loop(cfg, m_monitor, logger):
 
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
+        # reset the metrics
+        for m in m_monitor.metrics.values():
+            m.reset()
+
         with tqdm(train_loader, unit="batch") as tepoch:
             for data, domains, target in tepoch:
                 tepoch.set_description(f"Epoch {epoch}")
