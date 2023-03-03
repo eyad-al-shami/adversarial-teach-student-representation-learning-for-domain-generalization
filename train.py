@@ -35,6 +35,15 @@ def training_validation_loop(cfg, m_monitor, logger):
     phase = 'training'
     _, train_loader = get_dataset(cfg, phase)
 
+    # move modules to GPU if available
+    if (cfg.USE_CUDA):
+        augmenter = augmenter.to(cfg.DEVICE)
+        teacher = teacher.to(cfg.DEVICE)
+        student = student.to(cfg.DEVICE)
+        classifier = classifier.to(cfg.DEVICE)
+        for m in m_monitor.metrics.values():
+            m.to(cfg.DEVICE)
+
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
         with tqdm(train_loader, unit="batch") as tepoch:
@@ -45,13 +54,15 @@ def training_validation_loop(cfg, m_monitor, logger):
                 # 2. Representation Learning
                 # 2.1. Update the student
                 student = representation_learning_batch_training(augmenter, teacher, student, classifier, {data: data, target: target, domains: domains}, m_monitor, logger)
-                # 2.2. Update the teacher
+                # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
+                # 3. update the augmenter
 
 def ema(teacher, student, tau):
     with torch.no_grad():
         for teacher_param, student_param in zip(teacher.parameters(), student.parameters()):
-            teacher_param.data.copy_(teacher_param.data * (1.0 - tau) + student_param.data * tau)
+            teacher_param.data *= tau
+            teacher_param.data += (1 - tau) * student_param.data
     return teacher
 
 def warmup(cfg, backbone, classifier, m_monitor, logger):
@@ -61,13 +72,6 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     classifier.unfreeze()
     backbone.train()
     classifier.train()
-
-    # move to GPU if available
-    if (cfg.USE_CUDA):
-        backbone = backbone.to(cfg.DEVICE)
-        classifier = classifier.to(cfg.DEVICE)
-        for m in m_monitor.metrics.values():
-            m.to(cfg.DEVICE)
 
     # get the parameters of both the backbone and the classifier
     merged_parameters = utils.merge_parameters([backbone, classifier])
@@ -101,15 +105,7 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
     return backbone, classifier
 
 def representation_learning_batch_training(augmenter, teacher, student, classifier, batch, m_monitor, logger):
-    # move to GPU if available
-    if (cfg.USE_CUDA):
-        augmenter = augmenter.to(cfg.DEVICE)
-        teacher = teacher.to(cfg.DEVICE)
-        student = student.to(cfg.DEVICE)
-        classifier = classifier.to(cfg.DEVICE)
-        for m in m_monitor.metrics.values():
-            m.to(cfg.DEVICE)
-
+    
     # freeze the augmenter and the teacher (we freeze the teacher because we will update it using EMA)
     augmenter.freeze()
     teacher.freeze() # No need to accumulate gradients to make training faster
@@ -130,22 +126,57 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     # compute the discrepancy loss between the teacher and the student
     discrepancy = discripancy_loss(teacher_output - student_output, dim=1)
     # compute the cross entropy loss between the student output and the target
-    cross_entropy = cross_entropy_loss(student_output, batch['target'])
+    cross_entropy = cross_entropy_loss(classifier(student_output), batch['target'])
     # compute the total loss and update the student
     loss = cross_entropy + discrepancy
     loss.backward()
     optimizer.step()
-    # use EMA to update the teacher
+    # zero the gradients
+    optimizer.zero_grad()
 
     return student
 
+def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch, m_monitor, logger):
+    # unfreeze the augmenter
+    augmenter.train()
+    augmenter.unfreeze()
+    # freeze the teacher and the student
+    teacher.train()
+    student.train()
+    teacher.freeze()
+    student.freeze()
 
+    optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR, momentum=0.9)
+    cross_entropy_loss = torch.nn.CrossEntropyLoss()
+    # discrepancy_loss is the magnitude of the difference between the teacher and the student normalized outputs
+    discripancy_loss = torch.linalg.vector_norm
 
-def domain_augmentation():
-    pass
+    # compute the centroids of domains in the batch
+    with torch.no_grad():
+        centroids = []
+        for domain in batch['domains']:
+            centroids.append(torch.mean(batch['data'][batch['domains'] == domain], dim=0))
+        # compute the average distance between the centroids
+        margin = torch.mean(torch.linalg.vector_norm(torch.stack(centroids) - torch.stack(centroids).T, dim=1))
 
-def validation():
-    pass
+    # compute the output of the augmenter
+    augmented_data = augmenter(batch['data'])
+    # compute the output of the student on the augmented data
+    student_output = student(augmented_data)
+    # compute the output of the teacher on the original data
+    teacher_output = teacher(batch['data'])
+    # compute the discrepancy between the teacher and the student
+    discrepancy = discripancy_loss(teacher_output - student_output, dim=1)
+    # compute the cross entropy loss between the student output and the target
+    cross_entropy = cross_entropy_loss(classifier(student_output), batch['target'])
+    # compute the minimum between 0 and the margin - discrepancy
+    margin_loss = torch.min(discrepancy - margin, torch.tensor(0))
+    # compute the total loss and update the augmenter
+    loss = -margin_loss + cross_entropy
+    loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return augmenter
 
 
 if __name__ == '__main__':
