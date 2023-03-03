@@ -32,6 +32,9 @@ def set_logger(cfg):
         logger = wandb
     elif cfg.LOGGING.TENSORBOARD.ENABLE:
         logger = SummaryWriter()
+    else:
+        # TODO: add logging to file
+        logger = None
     return logger
 class RunningAverage():
     """A simple class that maintains the running average of a quantity

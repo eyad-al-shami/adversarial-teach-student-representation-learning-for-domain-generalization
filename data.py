@@ -93,7 +93,7 @@ def get_dataset(cfg, phase="train"):
 	if cfg.DATASET.NAME == "PACS":
 		tfms = build_transforms(cfg, phase)
 		train_dataset = PACS_DATASET(domains=cfg.DATASET.SOURCE_DOMAINS, images_root_dir=cfg.DATASET.ROOT, transform=tfms)
-		train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=cfg.SYSTEM.NUM_WORKERS)
+		train_loader = DataLoader(train_dataset, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=True, num_workers=cfg.SYSTEM.NUM_WORKERS, persistent_workers=True)
 	else:
 		raise NotImplementedError
 	return train_dataset, train_loader

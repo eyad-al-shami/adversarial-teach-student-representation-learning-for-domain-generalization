@@ -16,8 +16,9 @@ def merge_args_cfg(cfg, args):
         # If the experiment name is not provided, then use the date and time
         cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
     else:
-        cfg.LOGGING.TENSORBOARD.ENABLE = True
-        cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
+        cfg.LOGGING.WANDB.ENABLE = False
+        # cfg.LOGGING.TENSORBOARD.ENABLE = True
+        # cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
 
     if args.data_dir:
         cfg.DATASET.ROOT = args.data_dir

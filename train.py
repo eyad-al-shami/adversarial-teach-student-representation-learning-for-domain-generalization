@@ -6,11 +6,12 @@ from configs import setup_cfg
 import torch
 import torch.optim as optim
 from tqdm import tqdm
+import numpy as np
 
 import utils
 import model.net as net
 from data import get_dataset
-import torchmetrics
+from sklearn.metrics.pairwise import euclidean_distances
 # from evaluate import evaluate
 
 def create_componenets(cfg):
@@ -33,7 +34,7 @@ def training_validation_loop(cfg, logger):
     # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
     # create the metrics monitor
-    metrics_monitors = {"warmup_m_monitor": net.Metrics_Monitor(cfg), "rep_lern_m_monitor": net.Metrics_Monitor(cfg), "domain_augm": net.Metrics_Monitor(cfg)}
+    metrics_monitors = {"warmup_monitor": net.Metrics_Monitor(cfg), "rl_monitor": net.Metrics_Monitor(cfg), "aug__monitor": net.Metrics_Monitor(cfg)}
     # get the dataloader
     _, train_loader = get_dataset(cfg, phase)
 
@@ -49,27 +50,33 @@ def training_validation_loop(cfg, logger):
                 m.to(cfg.DEVICE)
     
     # 1. Warmup
-    teacher, classifier = warmup(cfg, teacher, classifier, metrics_monitors["warmup_m_monitor"], logger)
+    teacher, classifier = warmup(cfg, teacher, classifier, metrics_monitors["warmup_monitor"], logger)
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
         # reset the metrics
         for m in metrics_monitors.values():
             m.reset()
-
         with tqdm(train_loader, unit="batch") as tepoch:
-            for data, domains, target in tepoch:
+            # for data, domains, target in tepoch:
+            for batch in tepoch:
                 tepoch.set_description(f"Epoch {epoch}")
                 if (cfg.USE_CUDA):
-                    data, target = data.to(cfg.DEVICE), target.to(cfg.DEVICE)
+                    batch = [input_data.to(cfg.DEVICE) for input_data in batch]
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, loss = representation_learning_batch_training(augmenter, teacher, student, classifier, {"data": data, "target": target, "domains": domains}, metrics_monitors["rep_lern_m_monitor"])
+                student, rl_loss = representation_learning_batch_training(augmenter, teacher, student, classifier, batch)
+                with torch.no_grad():
+                    metrics_monitors["rl_monitor"].metrics["loss"](rl_loss.item())
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
-
-                tepoch.set_postfix(rep_lear_loss=loss)
-            logger.log({"rep_learn_loss":metrics_monitors["rep_lern_m_monitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
+                augmenter, aug_loss = domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch)
+                with torch.no_grad():
+                    metrics_monitors["aug__monitor"].metrics["loss"](aug_loss.item())
+                tepoch.set_postfix(rl_loss=rl_loss, aug_loss=aug_loss)
+            logger.log({"rl_loss":metrics_monitors["rl_monitor"].metrics["loss"].compute(), "aug_loss": metrics_monitors["aug__monitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
+        for m in metrics_monitors.values():
+            m.reset()
         if cfg.DEBUG:
             break
 
@@ -134,32 +141,31 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     discripancy_loss = torch.linalg.vector_norm
 
     # first pass the input through the augmenter and the teacher
-    augmented_data = augmenter(batch['data'])
-    teacher_output = teacher(batch['data'])
+    augmented_data = augmenter(batch[0])
+    teacher_output = teacher(batch[0])
     # then pass the augmented_data through the student
     student_output = student(augmented_data)
     # compute the discrepancy loss between the teacher and the student
     discrepancy = discripancy_loss(teacher_output - student_output, dim=1).sum()
     # compute the cross entropy loss between the student output and the target
-    cross_entropy = cross_entropy_loss(classifier(student_output), batch['target'])
+    cross_entropy = cross_entropy_loss(classifier(student_output), batch[2])
     # compute the total loss and update the student
     loss = cross_entropy + discrepancy
     loss.backward()
     optimizer.step()
     # zero the gradients
     optimizer.zero_grad()
-    with torch.no_grad():
-        m_monitor.metrics["loss"](loss.item())
-
+    
     return student, loss.item()
 
-def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch, m_monitor, logger):
+def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch, m_monitor):
     # unfreeze the augmenter
     augmenter.train()
     augmenter.unfreeze()
     # freeze the teacher and the student
-    teacher.train()
-    student.train()
+    # TODO: check if we need to set the teacher and the student in train rather than eval mode
+    teacher.eval()
+    student.eval()
     teacher.freeze()
     student.freeze()
 
@@ -171,35 +177,42 @@ def domain_augmentation_batch_training(augmenter, teacher, student, classifier, 
     # compute the centroids of domains in the batch
     with torch.no_grad():
         centroids = []
-        for domain in batch['domains']:
-            centroids.append(torch.mean(batch['data'][batch['domains'] == domain], dim=0))
-        # compute the average distance between the centroids
-        margin = torch.mean(torch.linalg.vector_norm(torch.stack(centroids) - torch.stack(centroids).T, dim=1))
+        with torch.no_grad():
+            doamins = set(batch[1].tolist())
+            for domain in doamins:
+                centroids.append(torch.mean(batch[0][batch[1] == domain], dim=[0, 2, 3])) # the output of this line is a tensor of shape (3)
+            centroids = torch.vstack(centroids)
+            distances = euclidean_distances(centroids.detach().numpy(), centroids.detach().numpy())
+            distances = distances[np.triu_indices(distances.shape[0], k = 1)]
+            margin = np.mean(distances)
+    
+    margin = torch.tensor(margin).to(cfg.DEVICE)
 
     # compute the output of the augmenter
-    augmented_data = augmenter(batch['data'])
+    augmented_data = augmenter(batch[0])
     # compute the output of the student on the augmented data
     student_output = student(augmented_data)
     # compute the output of the teacher on the original data
-    teacher_output = teacher(batch['data'])
+    teacher_output = teacher(batch[0])
     # compute the discrepancy between the teacher and the student
     discrepancy = discripancy_loss(teacher_output - student_output, dim=1)
-    # compute the cross entropy loss between the student output and the target
-    cross_entropy = cross_entropy_loss(classifier(student_output), batch['target'])
     # compute the minimum between 0 and the margin - discrepancy
     margin_loss = torch.min(discrepancy - margin, torch.tensor(0))
+    margin_loss = margin_loss.sum()
+    # compute the cross entropy loss between the student output and the target
+    cross_entropy = cross_entropy_loss(classifier(student_output), batch[2])
     # compute the total loss and update the augmenter
     loss = -margin_loss + cross_entropy
     loss.backward()
     optimizer.step()
     optimizer.zero_grad()
-    return augmenter
+    return augmenter, loss.item()
 
 
 if __name__ == '__main__':
 
     # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_cuda --use_wandb --experiment_name "testing the warmup process"
-    # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_wandb --experiment_name "testing the warmup process"
+    # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_wandb --experiment_name "testing the warmup process" --debug
     
     args = parser.parse_args()
     cfg = setup_cfg(args)
