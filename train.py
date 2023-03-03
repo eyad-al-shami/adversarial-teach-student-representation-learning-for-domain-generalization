@@ -28,15 +28,15 @@ def create_componenets(cfg):
     classifier = net.ClassifierLayer(cfg=cfg)
     return augmenter, teacher, student, classifier
 
-def training_validation_loop(cfg, logger):
+def training_validation_loop(cfg, m_monitor, logger):
     augmenter, teacher, student, classifier = create_componenets(cfg)
     # 1. Warmup
-    warmup(cfg, teacher, classifier, logger)
+    warmup(cfg, teacher, classifier, m_monitor, logger)
 
-def warmup(cfg, backbone, classifier, logger):
+def warmup(cfg, backbone, classifier, m_monitor, logger):
     phase = 'warmup'
-    train_acc = torchmetrics.Accuracy(task='multiclass', num_classes=cfg.DATASET.CLASSES)
-    train_loss = torchmetrics.MeanMetric()
+    # train_acc = torchmetrics.Accuracy(task='multiclass', num_classes=cfg.DATASET.CLASSES)
+    # train_loss = torchmetrics.MeanMetric()
 
     backbone.unfreeze()
     classifier.unfreeze()
@@ -46,8 +46,8 @@ def warmup(cfg, backbone, classifier, logger):
     # move to GPU if available
     if (cfg.USE_CUDA):
         warmup_model = warmup_model.to(cfg.DEVICE)
-        train_acc = train_acc.to(cfg.DEVICE)
-        train_loss = train_loss.to(cfg.DEVICE)
+        for m in m_monitor.metrics.values():
+            m.to(cfg.DEVICE)
 
     criterion = torch.nn.CrossEntropyLoss()
     optimizer = optim.SGD(warmup_model.parameters(), lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
@@ -66,11 +66,13 @@ def warmup(cfg, backbone, classifier, logger):
                 loss.backward()
                 optimizer.step()
                 with torch.no_grad():
-                    acc = train_acc(output, target)
-                    train_loss(loss)
+                    acc = m_monitor.metrics["acc"](output, target)
+                    m_monitor.metrics["loss"](loss)
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
-            logger.log({"warmup_loss": train_loss.compute(), "warmup_acc": train_acc.compute(), "epoch": epoch, "phase": phase})
-    train_acc.reset()
+            logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
+        if cfg.DEBUG:
+            break
+    m_monitor.reset()
     return warmup_model[0], warmup_model[1]
 
 def set_logger(cfg):
@@ -102,7 +104,10 @@ if __name__ == '__main__':
 
     print(cfg)
     logger = set_logger(cfg)
-    training_validation_loop(cfg, logger)
+    m_monitor = net.Metrics_Monitor(cfg)
+    training_validation_loop(cfg, m_monitor, logger)
+
+
 
     # # Set the logger
     # utils.set_logger(os.path.join(args.model_dir, 'train.log'))

@@ -14,6 +14,7 @@ _C.SEED = 1337
 # Print detailed information
 # E.g. trainer, dataset, and backbone
 _C.VERBOSE = True
+_C.DEBUG = False
 
 ###########################
 # System Hardware
@@ -83,8 +84,14 @@ _C.DATASET.TARGET_DOMAINS = None
 _C.DATASET.NAME = ""
 
 ###########################
-# Model
+# Metrics
 ###########################
+
+_C.METRICS = CN()
+_C.METRICS = ["accuracy", "loss"]
+_C.METRICS.ACCURACY = CN()
+_C.METRICS.ACCURACY.TOP_K = (1,)
+_C.METRICS.ACCURACY.TASK = "multiclass"
 
 
 

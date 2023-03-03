@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import functools
+import torchmetrics
 
 
 class ResnetBlock(nn.Module):
@@ -165,3 +166,16 @@ def build_augmenter():
   net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer)
   # init_network_weights(net, init_type="normal", gain=0.02)
   return net
+
+class Metrics_Monitor():
+    def __init__(self, cfg) -> None:
+        self.metrics = {}
+        if "accuracy" in cfg.METRICS:
+            self.metrics["acc"] = torchmetrics.Accuracy(task=cfg.METRICS.ACCURACY.TASK, num_classes=cfg.DATASET.CLASSES)
+        if "loss" in cfg.METRICS:
+            self.metrics["loss"] = torchmetrics.MeanMetric()
+    def clear(self):
+        for m in self.metrics.values():
+            m.reset()
+
+    

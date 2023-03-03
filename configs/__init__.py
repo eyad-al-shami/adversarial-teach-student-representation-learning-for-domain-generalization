@@ -10,6 +10,7 @@ def get_cfg_defaults():
   return cfg_default.clone()
 
 def merge_args_cfg(cfg, args):
+    # TODO logging must always be enabled, use tensorboard by default
     if args.use_wandb:
         cfg.LOGGING.WANDB.ENABLE = True
         # If the experiment name is not provided, then use the date and time
@@ -50,6 +51,11 @@ def merge_args_cfg(cfg, args):
           logging.warning("CUDA is not available, using CPU instead")
           cfg.USE_CUDA = False
           cfg.DEVICE = "cpu"
+
+    if args.debug:
+        cfg.DEBUG = True
+    
+    cfg.merge_from_list(args.opts)
 
 def setup_cfg(args):
     cfg = get_cfg_defaults()
