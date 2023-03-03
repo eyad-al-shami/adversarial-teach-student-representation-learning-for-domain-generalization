@@ -89,7 +89,6 @@ def load_checkpoint(checkpoint, model, optimizer=None):
     if optimizer:
         optimizer.load_state_dict(checkpoint['optim_dict'])
     return checkpoint
-
 class OnlineMeanStd:
     def __init__(self):
         pass

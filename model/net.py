@@ -174,7 +174,7 @@ class Metrics_Monitor():
             self.metrics["acc"] = torchmetrics.Accuracy(task=cfg.METRICS.ACCURACY.TASK, num_classes=cfg.DATASET.CLASSES)
         if "loss" in cfg.METRICS.MONITOR:
             self.metrics["loss"] = torchmetrics.MeanMetric()
-    def clear(self):
+    def reset(self):
         for m in self.metrics.values():
             m.reset()
 
