@@ -35,7 +35,7 @@ def training_validation_loop(cfg, logger):
 
 def warmup(cfg, backbone, classifier, logger):
     phase = 'warmup'
-    train_acc = torchmetrics.Accuracy()
+    train_acc = torchmetrics.Accuracy(task='multiclass', num_classes=cfg.DATASET.CLASSES)
     train_loss = torchmetrics.MeanMetric()
 
     backbone.unfreeze()
@@ -69,13 +69,13 @@ def warmup(cfg, backbone, classifier, logger):
                     acc = train_acc(output, target)
                     train_loss(loss)
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
-            logger.log({"warmup_loss": train_loss.compute(), "warmup_acc": acc.compute(), "epoch": epoch, "phase": phase})
+            logger.log({"warmup_loss": train_loss.compute(), "warmup_acc": train_acc.compute(), "epoch": epoch, "phase": phase})
     train_acc.reset()
     return warmup_model[0], warmup_model[1]
 
 def set_logger(cfg):
     if cfg.LOGGING.WANDB.ENABLE:
-        run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.WANDB.RUN_NAME, config=cfg)
+        run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.EXPERIMENT_NAME, config=cfg)
         logger = wandb
     elif cfg.LOGGING.TENSORBOARD.ENABLE:
         logger = SummaryWriter()
@@ -93,7 +93,7 @@ def validation():
 
 if __name__ == '__main__':
 
-    # python train.py --experiment_cfg Experements/E1_No_Normalization.yaml --use_cuda --use_wandb --run_name "testing the warmup process"
+    # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_cuda --use_wandb --experiment_name "testing the warmup process"
     
     args = parser.parse_args()
     cfg = setup_cfg(args)

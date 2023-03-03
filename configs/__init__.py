@@ -12,11 +12,11 @@ def get_cfg_defaults():
 def merge_args_cfg(cfg, args):
     if args.use_wandb:
         cfg.LOGGING.WANDB.ENABLE = True
-        # If the experement name is not provided, then use the date and time
-        cfg.LOGGING.EXPEREMENT_NAME = args.experement_name if args.experement_name else utils.get_readable_date_time()
+        # If the experiment name is not provided, then use the date and time
+        cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
     else:
         cfg.LOGGING.TENSORBOARD.ENABLE = True
-        cfg.LOGGING.EXPEREMENT_NAME = args.experement_name if args.experement_name else utils.get_readable_date_time()
+        cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
 
     if args.data_dir:
         cfg.DATASET.ROOT = args.data_dir

@@ -9,7 +9,7 @@ DATASET:
   MEAN: [0.8158, 0.7974, 0.7717]
   STD: [0.2895, 0.3015, 0.3315]
 LOGGING:
+  EXPERIMENT_NAME:"testing warmup"
   WANDB:
     ENABLE: True
     PROJECT: "Adversarial-TS-DG"
-    RUN_NAME: "testing warmup"
