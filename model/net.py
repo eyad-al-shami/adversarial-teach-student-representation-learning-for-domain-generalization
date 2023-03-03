@@ -170,9 +170,9 @@ def build_augmenter():
 class Metrics_Monitor():
     def __init__(self, cfg) -> None:
         self.metrics = {}
-        if "accuracy" in cfg.METRICS:
+        if "accuracy" in cfg.METRICS.MONITOR:
             self.metrics["acc"] = torchmetrics.Accuracy(task=cfg.METRICS.ACCURACY.TASK, num_classes=cfg.DATASET.CLASSES)
-        if "loss" in cfg.METRICS:
+        if "loss" in cfg.METRICS.MONITOR:
             self.metrics["loss"] = torchmetrics.MeanMetric()
     def clear(self):
         for m in self.metrics.values():

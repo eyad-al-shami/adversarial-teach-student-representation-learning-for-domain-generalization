@@ -96,6 +96,7 @@ def validation():
 if __name__ == '__main__':
 
     # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_cuda --use_wandb --experiment_name "testing the warmup process"
+    # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_wandb --experiment_name "testing the warmup process"
     
     args = parser.parse_args()
     cfg = setup_cfg(args)

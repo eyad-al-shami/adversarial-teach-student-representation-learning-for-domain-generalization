@@ -1,3 +1,5 @@
+# USE_CUDA: False
+# DEVICE: "cpu"
 DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]

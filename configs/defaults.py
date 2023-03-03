@@ -88,7 +88,7 @@ _C.DATASET.NAME = ""
 ###########################
 
 _C.METRICS = CN()
-_C.METRICS = ["accuracy", "loss"]
+_C.METRICS.MONITOR = ["accuracy", "loss"]
 _C.METRICS.ACCURACY = CN()
 _C.METRICS.ACCURACY.TOP_K = (1,)
 _C.METRICS.ACCURACY.TASK = "multiclass"
