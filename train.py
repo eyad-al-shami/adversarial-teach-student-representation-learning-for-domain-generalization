@@ -59,7 +59,7 @@ def training_validation_loop(cfg, m_monitor, logger):
                     data, target = data.to(cfg.DEVICE), target.to(cfg.DEVICE)
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student = representation_learning_batch_training(augmenter, teacher, student, classifier, {data: data, target: target, domains: domains}, m_monitor, logger)
+                student = representation_learning_batch_training(augmenter, teacher, student, classifier, {"data": data, "target": target, "domains": domains}, m_monitor, logger)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
