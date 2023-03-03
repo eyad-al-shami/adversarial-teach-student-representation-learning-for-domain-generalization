@@ -29,8 +29,7 @@ def create_componenets(cfg):
 
 def training_validation_loop(cfg, m_monitor, logger):
     augmenter, teacher, student, classifier = create_componenets(cfg)
-    # 1. Warmup
-    teacher, classifier = warmup(cfg, teacher, classifier, m_monitor, logger)
+    
 
     phase = 'training'
     _, train_loader = get_dataset(cfg, phase)
@@ -43,6 +42,9 @@ def training_validation_loop(cfg, m_monitor, logger):
         classifier = classifier.to(cfg.DEVICE)
         for m in m_monitor.metrics.values():
             m.to(cfg.DEVICE)
+    
+    # 1. Warmup
+    teacher, classifier = warmup(cfg, teacher, classifier, m_monitor, logger)
 
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
