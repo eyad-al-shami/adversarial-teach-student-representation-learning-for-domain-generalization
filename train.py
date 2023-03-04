@@ -59,7 +59,7 @@ def training_validation_loop(cfg, logger):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, rl_loss = TSBatchTraining(augmenter, teacher, student, classifier, batch)
+                student, rl_loss = TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch)
                 with torch.no_grad():
                     metrics_monitors["TSMonitor"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
@@ -74,8 +74,10 @@ def training_validation_loop(cfg, logger):
                 logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["AugDMonitor"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["AugCeMonitor"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
+        # reduce the learning rate after 30 epochs
         if cfg.DRY_RUN:
             break
+    return teacher, student, augmenter, classifier
 
 def ema(teacher, student, tau):
     with torch.no_grad():
@@ -140,7 +142,7 @@ def TWarmup(cfg, backbone, classifier, m_monitor, logger):
     m_monitor.reset()
     return backbone, classifier
 
-def TSBatchTraining(augmenter, teacher, student, classifier, batch):
+def TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch):
     ''''
         Train the student model
         params:
@@ -160,8 +162,11 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch):
     # put teacher and student in train mode
     teacher.train()
     student.train()
-
     optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
+    if epoch == 30:
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = cfg.MODEL.STUDENT.LR / 10
+        print(f"\nReducing the learning rate to {cfg.MODEL.STUDENT.LR / 10}.\n")
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     # first pass the input through the augmenter and the teacher
