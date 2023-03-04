@@ -165,8 +165,8 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch):
     optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
     if epoch == 30:
         for param_group in optimizer.param_groups:
-            param_group['lr'] = cfg.MODEL.STUDENT.LR / 10
-        print(f"\nReducing the learning rate to {cfg.MODEL.STUDENT.LR / 10}.\n")
+            param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
+        print(f"\nReducing the learning rate to {cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY}.\n")
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     # first pass the input through the augmenter and the teacher
