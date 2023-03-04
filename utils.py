@@ -27,10 +27,12 @@ def merge_parameters(models):
     return params
 
 def set_logger(cfg):
-    if cfg.LOGGING.WANDB.ENABLE:
+    if (cfg.LOGGING.ENABLED == False):
+        return None
+    if cfg.LOGGING.LOGGER == "wandb":
         run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.EXPERIMENT_NAME, config=cfg)
         logger = wandb
-    elif cfg.LOGGING.TENSORBOARD.ENABLE:
+    elif cfg.LOGGING.LOGGER == "tensorboard":
         logger = SummaryWriter()
     else:
         # TODO: add logging to file

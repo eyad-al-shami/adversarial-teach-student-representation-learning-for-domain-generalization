@@ -53,7 +53,6 @@ def training_validation_loop(cfg, logger):
         for m in metrics_monitors.values():
             m.reset()
         with tqdm(train_loader, unit="batch") as tepoch:
-            # for data, domains, target in tepoch:
             for batch in tepoch:
                 tepoch.set_description(f"Epoch {epoch}")
                 if (cfg.USE_CUDA):
@@ -71,10 +70,12 @@ def training_validation_loop(cfg, logger):
                     metrics_monitors["AugDMonitor"].metrics["loss"](aug_D_loss)
                     metrics_monitors["AugCeMonitor"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
-            logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["AugDMonitor"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["AugCeMonitor"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
+            if cfg.LOGGING.ENABLED:
+                logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["AugDMonitor"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["AugCeMonitor"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
-        if cfg.DEBUG:
+        break
+        if cfg.DRY_RUN:
             break
 
 def ema(teacher, student, tau):
@@ -130,8 +131,9 @@ def TWarmup(cfg, backbone, classifier, m_monitor, logger):
                     acc = m_monitor.metrics["acc"](output, target)
                     m_monitor.metrics["loss"](loss)
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
-            logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
-        if cfg.DEBUG:
+            if cfg.LOGGING.ENABLED:
+                logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
+        if cfg.DRY_RUN:
             break
     optimizer.zero_grad()
     backbone.zero_grad()
@@ -162,20 +164,29 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch):
 
     optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
-    # discrepancy_loss is the magnitude of the difference between the teacher and the student normalized outputs
-    discripancy_loss = torch.linalg.vector_norm
 
     # first pass the input through the augmenter and the teacher
     augmented_data = augmenter(batch[0])
-    teacher_output = teacher(batch[0])
+    t_output = teacher(batch[0])
     # then pass the augmented_data through the student
-    student_output = student(augmented_data)
-    # compute the discrepancy loss between the teacher and the student
-    discrepancy = discripancy_loss(teacher_output - student_output, dim=1).sum()
+    s_output = student(augmented_data)
+    with torch.no_grad():
+        t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
+        s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
+    t_output_normalized /= t_output_magnitude
+    s_output_normalized /= s_output_magnitude
+    discrepancy = t_output_normalized - s_output_normalized
+    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    # +                  DEBUGGING SECTION                 +        
+    # +     Uncomment the following lines to debug         +
+    # print((t_output - s_output).shape) # [64, 512]
+    # return
+    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # compute the cross entropy loss between the student output and the target
-    cross_entropy = cross_entropy_loss(classifier(student_output), batch[2])
+    cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the student
-    loss = cross_entropy + discrepancy
+    loss = cross_entropy + discrepancy_loss
     loss.backward()
     optimizer.step()
     # zero the gradients

@@ -11,14 +11,11 @@ def get_cfg_defaults():
 
 def merge_args_cfg(cfg, args):
     # TODO logging must always be enabled, use tensorboard by default
-    if args.use_wandb:
-        cfg.LOGGING.WANDB.ENABLE = True
+    if args.logger:
+        cfg.LOGGING.ENABLED = True
+        cfg.LOGGING.LOGGER = args.logger
         # If the experiment name is not provided, then use the date and time
         cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
-    else:
-        cfg.LOGGING.WANDB.ENABLE = False
-        # cfg.LOGGING.TENSORBOARD.ENABLE = True
-        # cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
 
     if args.data_dir:
         cfg.DATASET.ROOT = args.data_dir
@@ -53,8 +50,13 @@ def merge_args_cfg(cfg, args):
           cfg.USE_CUDA = False
           cfg.DEVICE = "cpu"
 
-    if args.debug:
-        cfg.DEBUG = True
+    if args.dry_run:
+        cfg.DRY_RUN = True
+
+    if args.use_cpu:
+        cfg.USE_CUDA = False
+        cfg.DEVICE = "cpu"
+
     
     cfg.merge_from_list(args.opts)
 

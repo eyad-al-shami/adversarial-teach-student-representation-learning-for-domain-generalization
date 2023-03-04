@@ -14,7 +14,7 @@ _C.SEED = 1337
 # Print detailed information
 # E.g. trainer, dataset, and backbone
 _C.VERBOSE = True
-_C.DEBUG = False
+_C.DRY_RUN = False
 
 ###########################
 # System Hardware
@@ -35,8 +35,9 @@ _C.TRAIN.PRINT_FREQ = 100
 
 _C.LOGGING = CN()
 
+_C.LOGGING.ENABLED = False
 _C.LOGGING.EXPERIMENT_NAME = ""
-
+_C.LOGGING.LOGGER = "wandb"
 
 _C.LOGGING.WANDB = CN()
 _C.LOGGING.WANDB.ENABLE = False

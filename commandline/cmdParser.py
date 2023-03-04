@@ -13,9 +13,10 @@ parser.add_argument('--target_domains', nargs = '+', default  =  ["sketch"], typ
 parser.add_argument('--backbone', default = 'resnet18', type = str,help = "The backbone to use for the model")
 parser.add_argument('--experiment_cfg', default = None,type = str, help = "The config file for the experiment")
 # add argument for using wandb, if not provided, then use tensorboard
-parser.add_argument('--use_wandb', action = 'store_true', help = "Use wandb for logging")
+parser.add_argument('--logger', default = None ,type = str, help = "The logger to use for the experiment")
 parser.add_argument('--use_cuda', action = 'store_true', help = "Use cuda for training")
+parser.add_argument('--use_cpu', action = 'store_true', help = "Use cpu for training")
 parser.add_argument('--dataset', default = None,choices = ["PACS"], type = str, help = "The name of the dataset")
 # add argument to do one pass to check if the code is working
-parser.add_argument('--debug', action = 'store_true', help = "Do one pass to check if the code is working")
+parser.add_argument('--dry_run', action = 'store_true', help = "Do one pass to check if the code is working")
 parser.add_argument("opts", default = None, nargs = argparse.REMAINDER, help = "modify config options using the command-line")
