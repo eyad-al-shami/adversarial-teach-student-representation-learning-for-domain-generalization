@@ -220,7 +220,7 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
             for domain in doamins:
                 centroids.append(torch.mean(batch[0][batch[1] == domain], dim=[0, 2, 3])) # the output of this line is a tensor of shape (3)
             centroids = torch.vstack(centroids)
-            distances = euclidean_distances(centroids.detach().numpy(), centroids.detach().numpy())
+            distances = euclidean_distances(centroids.cpu().numpy(), centroids.cpu().numpy())
             distances = distances[np.triu_indices(distances.shape[0], k = 1)]
             margin = np.mean(distances)
     
@@ -236,6 +236,7 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
     discrepancy = discripancy_loss(teacher_output - student_output, dim=1)
     # compute the minimum between 0 and the margin - discrepancy
     margin_loss = torch.min(discrepancy - margin, torch.tensor(0))
+    # TODO: check if this is correct
     margin_loss = margin_loss.sum()
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(student_output), batch[2])
