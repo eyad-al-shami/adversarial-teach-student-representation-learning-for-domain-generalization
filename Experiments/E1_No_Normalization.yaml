@@ -17,3 +17,5 @@ LOGGING:
   WANDB:
     ENABLE: True
     PROJECT: "Adversarial-TS-DG"
+TRAIN:
+  BATCH_SIZE: 64
