@@ -173,8 +173,8 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch):
     with torch.no_grad():
         t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
         s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
-    t_output_normalized /= t_output_magnitude
-    s_output_normalized /= s_output_magnitude
+    t_output_normalized = t_output / t_output_magnitude
+    s_output_normalized = s_output / s_output_magnitude
     discrepancy = t_output_normalized - s_output_normalized
     discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
