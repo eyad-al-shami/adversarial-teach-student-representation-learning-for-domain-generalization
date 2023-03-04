@@ -33,11 +33,8 @@ def training_validation_loop(cfg, logger):
     phase = 'training'
     # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
-    # create the metrics monitor
-    metrics_monitors = {"warmup_monitor": net.Metrics_Monitor(cfg), "rl_monitor": net.Metrics_Monitor(cfg), "aug__monitor": net.Metrics_Monitor(cfg)}
-    # get the dataloader
+    metrics_monitors = {"TWMonitor": net.Metrics_Monitor(cfg), "TSMonitor": net.Metrics_Monitor(cfg), "AMonitor": net.Metrics_Monitor(cfg)}
     _, train_loader = get_dataset(cfg, phase)
-
     # move modules to GPU if available
     if (cfg.USE_CUDA):
         augmenter = augmenter.to(cfg.DEVICE)
@@ -48,9 +45,8 @@ def training_validation_loop(cfg, logger):
         for mm in metrics_monitors.values():
             for m in mm.metrics.values():
                 m.to(cfg.DEVICE)
-    
     # 1. Warmup
-    teacher, classifier = warmup(cfg, teacher, classifier, metrics_monitors["warmup_monitor"], logger)
+    teacher, classifier = TWarmup(cfg, teacher, classifier, metrics_monitors["TWMonitor"], logger)
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
         # reset the metrics
@@ -64,17 +60,17 @@ def training_validation_loop(cfg, logger):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, rl_loss = representation_learning_batch_training(augmenter, teacher, student, classifier, batch)
+                student, rl_loss = TSBatchTraining(augmenter, teacher, student, classifier, batch)
                 with torch.no_grad():
-                    metrics_monitors["rl_monitor"].metrics["loss"](rl_loss)
+                    metrics_monitors["TSMonitor"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
-                augmenter, aug_loss = domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch)
+                augmenter, aug_loss = ABatchTraining(augmenter, teacher, student, classifier, batch)
                 with torch.no_grad():
-                    metrics_monitors["aug__monitor"].metrics["loss"](aug_loss)
+                    metrics_monitors["AMonitor"].metrics["loss"](aug_loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_loss=aug_loss)
-            logger.log({"rl_loss":metrics_monitors["rl_monitor"].metrics["loss"].compute(), "aug_loss": metrics_monitors["aug__monitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
+            logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_loss": metrics_monitors["AMonitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
         if cfg.DEBUG:
@@ -87,7 +83,20 @@ def ema(teacher, student, tau):
             teacher_param.data += (1 - tau) * student_param.data
     return teacher
 
-def warmup(cfg, backbone, classifier, m_monitor, logger):
+def TWarmup(cfg, backbone, classifier, m_monitor, logger):
+    '''
+        Warmup the teacher and the classifier
+        params:
+            cfg: the configuration object
+            backbone: the teacher model
+            classifier: the classifier layer
+            m_monitor: the metrics monitor
+            logger: the logger object
+        return:
+            backbone: the teacher model
+            classifier: the classifier layer
+    '''
+
     phase = 'warmup'
 
     backbone.unfreeze()
@@ -123,11 +132,26 @@ def warmup(cfg, backbone, classifier, m_monitor, logger):
             logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
         if cfg.DEBUG:
             break
+    optimizer.zero_grad()
+    backbone.zero_grad()
+    classifier.zero_grad()
     m_monitor.reset()
     return backbone, classifier
 
-def representation_learning_batch_training(augmenter, teacher, student, classifier, batch):
-    
+def TSBatchTraining(augmenter, teacher, student, classifier, batch):
+    ''''
+        Train the student model
+        params:
+            augmenter: the augmenter model
+            teacher: the teacher model
+            student: the student model
+            classifier: the classifier layer
+            batch: the batch of data
+        return:
+            student: the student model
+            loss: the loss of the student model
+    '''
+
     # freeze the augmenter and the teacher (we freeze the teacher because we will update it using EMA)
     augmenter.freeze()
     teacher.freeze() # No need to accumulate gradients to make training faster
@@ -155,19 +179,33 @@ def representation_learning_batch_training(augmenter, teacher, student, classifi
     optimizer.step()
     # zero the gradients
     optimizer.zero_grad()
+    student.zero_grad()
+    teacher.zero_grad()
+    augmenter.zero_grad()
+    classifier.zero_grad()
     
     return student, loss.item()
 
-def domain_augmentation_batch_training(augmenter, teacher, student, classifier, batch):
+def ABatchTraining(augmenter, teacher, student, classifier, batch):
+    ''''
+        Train the augmenter model
+        params:
+            augmenter: the augmenter model
+            teacher: the teacher model
+            student: the student model
+            classifier: the classifier layer
+            batch: the batch of data
+        return:
+            augmenter: the augmenter model
+            loss: the loss of the augmenter model
+    '''
+    
     # unfreeze the augmenter
     augmenter.train()
     augmenter.unfreeze()
-    # freeze the teacher and the student
-    # TODO: check if we need to set the teacher and the student in train rather than eval mode
+
     teacher.eval()
     student.eval()
-    teacher.freeze()
-    student.freeze()
 
     optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR, momentum=0.9)
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
@@ -205,7 +243,12 @@ def domain_augmentation_batch_training(augmenter, teacher, student, classifier, 
     loss = -margin_loss + cross_entropy
     loss.backward()
     optimizer.step()
+    # zero the gradients
     optimizer.zero_grad()
+    student.zero_grad()
+    teacher.zero_grad()
+    augmenter.zero_grad()
+    classifier.zero_grad()
     return augmenter, loss.item()
 
 
