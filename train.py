@@ -74,7 +74,6 @@ def training_validation_loop(cfg, logger):
                 logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["AugDMonitor"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["AugCeMonitor"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
-        break
         if cfg.DRY_RUN:
             break
 
