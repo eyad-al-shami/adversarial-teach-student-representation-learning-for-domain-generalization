@@ -34,7 +34,7 @@ def training_validation_loop(cfg, logger):
     # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
     metrics_monitors = {"TWMonitor": net.Metrics_Monitor(cfg), "TSMonitor": net.Metrics_Monitor(cfg), "AugDMonitor": net.Metrics_Monitor(cfg), "AugCeMonitor": net.Metrics_Monitor(cfg)}
-    _, train_loader = get_dataset(cfg, phase)
+    _, train_loader = get_dataset(cfg, phase, source_domains=cfg.DATASET.SOURCE_DOMAINS)
     # move modules to GPU if available
     if (cfg.USE_CUDA):
         augmenter = augmenter.to(cfg.DEVICE)
@@ -77,6 +77,8 @@ def training_validation_loop(cfg, logger):
         # reduce the learning rate after 30 epochs
         if cfg.DRY_RUN:
             break
+        t_acc = test_teacher(cfg, teacher, classifier)
+        logger.log({"teacher_acc": t_acc, "epoch": epoch, "phase": phase})
     return teacher, student, augmenter, classifier
 
 def ema(teacher, student, tau):
@@ -86,7 +88,7 @@ def ema(teacher, student, tau):
             teacher_param.data += (1 - tau) * student_param.data
     return teacher
 
-def TWarmup(cfg, backbone, classifier, m_monitor, logger):
+def TWarmup(cfg, teacher, classifier, m_monitor, logger):
     '''
         Warmup the teacher and the classifier
         params:
@@ -102,13 +104,13 @@ def TWarmup(cfg, backbone, classifier, m_monitor, logger):
 
     phase = 'warmup'
 
-    backbone.unfreeze()
+    teacher.unfreeze()
     classifier.unfreeze()
-    backbone.train()
+    teacher.train()
     classifier.train()
 
     # get the parameters of both the backbone and the classifier
-    merged_parameters = utils.merge_parameters([backbone, classifier])
+    merged_parameters = utils.merge_parameters([teacher, classifier])
 
     optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
@@ -123,7 +125,7 @@ def TWarmup(cfg, backbone, classifier, m_monitor, logger):
                 optimizer.zero_grad()
 
                 # computing the output
-                output = classifier(backbone(data))
+                output = classifier(teacher(data))
 
                 loss = criterion(output, target)
                 loss.backward()
@@ -137,10 +139,10 @@ def TWarmup(cfg, backbone, classifier, m_monitor, logger):
         if cfg.DRY_RUN:
             break
     optimizer.zero_grad()
-    backbone.zero_grad()
+    teacher.zero_grad()
     classifier.zero_grad()
     m_monitor.reset()
-    return backbone, classifier
+    return teacher, classifier
 
 def TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch):
     ''''
@@ -181,12 +183,6 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch):
     s_output_normalized = s_output / s_output_magnitude
     discrepancy = t_output_normalized - s_output_normalized
     discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
-    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
-    # +                  DEBUGGING SECTION                 +        
-    # +     Uncomment the following lines to debug         +
-    # print((t_output - s_output).shape) # [64, 512]
-    # return
-    # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the student
@@ -219,14 +215,11 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
     # unfreeze the augmenter
     augmenter.train()
     augmenter.unfreeze()
-
     teacher.eval()
     student.eval()
 
     optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR, momentum=0.9)
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
-    # discrepancy_loss is the magnitude of the difference between the teacher and the student normalized outputs
-    discripancy_loss = torch.linalg.vector_norm
 
     # compute the centroids of domains in the batch
     with torch.no_grad():
@@ -257,8 +250,6 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
     discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
     # compute the minimum between 0 and the margin - discrepancy
     margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0))
-    # TODO: check if this is correct
-    margin_loss = margin_loss.sum()
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the augmenter
@@ -273,6 +264,23 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
     classifier.zero_grad()
     return augmenter, margin_loss.item(), cross_entropy.item()
 
+# test the teacher after appending the classifier layer on the held-out domain and return the accuracy
+def test_teacher(cfg, teacher, classifier):
+    _, target_data_loader = get_dataset(cfg, domains=cfg.DATASET.TARGET_DOMAINS)
+    teacher.eval()
+    classifier.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for batch in target_data_loader:
+            if (cfg.USE_CUDA):
+                batch = [tensor.to(cfg.DEVICE) for tensor in batch]
+            output = teacher(batch[0])
+            output = classifier(output)
+            _, predicted = torch.max(output.data, 1)
+            total += batch[2].size(0)
+            correct += (predicted == batch[2]).sum().item()
+    return 100 * correct / total
 
 if __name__ == '__main__':
 
@@ -285,31 +293,13 @@ if __name__ == '__main__':
     utils.set_random_seed(cfg.SEED)
     print(cfg)
     logger = utils.set_logger(cfg)
-    training_validation_loop(cfg, logger)
-
-
+    teacher, student, augmenter, classifier = training_validation_loop(cfg, logger)
+    teacher_acc = test_teacher(cfg, teacher, classifier)
+    # print a final summary of the experiment results using print.
+    print("The teacher accuracy on the target domain is: ", teacher_acc)
 
     # # Set the logger
     # utils.set_logger(os.path.join(args.model_dir, 'train.log'))
-
-    # # Create the input data pipeline
-    # logging.info("Loading the datasets...")
-
-    # # fetch dataloaders
-    # dataloaders = data_loader.fetch_dataloader(
-    #     ['train', 'val'], args.data_dir, params)
-    # train_dl = dataloaders['train']
-    # val_dl = dataloaders['val']
-
-    # logging.info("- done.")
-
-    # # Define the model and optimizer
-    # model = net.Net(params).cuda() if params.cuda else net.Net(params)
-    # optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
-
-    # # fetch loss function and metrics
-    # loss_fn = net.loss_fn
-    # metrics = net.metrics
 
     # # Train the model
     # logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
