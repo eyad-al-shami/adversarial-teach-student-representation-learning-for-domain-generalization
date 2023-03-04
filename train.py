@@ -176,7 +176,7 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch):
     t_output_normalized = t_output / t_output_magnitude
     s_output_normalized = s_output / s_output_magnitude
     discrepancy = t_output_normalized - s_output_normalized
-    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
+    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
     # ++++++++++++++++++++++++++++++++++++++++++++++++++++++
     # +                  DEBUGGING SECTION                 +        
     # +     Uncomment the following lines to debug         +
