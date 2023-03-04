@@ -34,7 +34,7 @@ def training_validation_loop(cfg, logger):
     # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
     metrics_monitors = {"TWMonitor": net.Metrics_Monitor(cfg), "TSMonitor": net.Metrics_Monitor(cfg), "AugDMonitor": net.Metrics_Monitor(cfg), "AugCeMonitor": net.Metrics_Monitor(cfg)}
-    _, train_loader = get_dataset(cfg, phase, source_domains=cfg.DATASET.SOURCE_DOMAINS)
+    _, train_loader = get_dataset(cfg, phase, domains=cfg.TRAIN.SOURCE_DOMAINS)
     # move modules to GPU if available
     if (cfg.USE_CUDA):
         augmenter = augmenter.to(cfg.DEVICE)
@@ -114,7 +114,7 @@ def TWarmup(cfg, teacher, classifier, m_monitor, logger):
 
     optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
     criterion = torch.nn.CrossEntropyLoss()
-    _, train_loader = get_dataset(cfg, phase)
+    _, train_loader = get_dataset(cfg, phase, domains=cfg.TRAIN.SOURCE_DOMAINS)
 
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
         with tqdm(train_loader, unit="batch") as tepoch:

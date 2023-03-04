@@ -90,6 +90,9 @@ def build_transforms(cfg, phase="train"):
 	return tfms
 
 def get_dataset(cfg, phase="train", domains=[]):
+	if domains == []:
+		print("domains not provided, using the default training source domains.")
+		domains = cfg.TRAIN.SOURCE_DOMAINS
 	if cfg.DATASET.NAME == "PACS":
 		tfms = build_transforms(cfg, phase)
 		train_dataset = PACS_DATASET(domains=domains, images_root_dir=cfg.DATASET.ROOT, transform=tfms)
