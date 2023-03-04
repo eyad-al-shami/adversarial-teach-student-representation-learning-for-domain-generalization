@@ -1,7 +1,7 @@
-USE_CUDA: False
-DEVICE: "cpu"
+# USE_CUDA: False
+# DEVICE: "cpu"
 TRAIN:
-  EPOCHS: 20
+  EPOCHS: 60
 DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
