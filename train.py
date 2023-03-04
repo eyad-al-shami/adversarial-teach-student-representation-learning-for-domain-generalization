@@ -33,7 +33,7 @@ def training_validation_loop(cfg, logger):
     phase = 'training'
     # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
-    metrics_monitors = {"TWMonitor": net.Metrics_Monitor(cfg), "TSMonitor": net.Metrics_Monitor(cfg), "AMonitor": net.Metrics_Monitor(cfg)}
+    metrics_monitors = {"TWMonitor": net.Metrics_Monitor(cfg), "TSMonitor": net.Metrics_Monitor(cfg), "AugDMonitor": net.Metrics_Monitor(cfg), "AugCeMonitor": net.Metrics_Monitor(cfg)}
     _, train_loader = get_dataset(cfg, phase)
     # move modules to GPU if available
     if (cfg.USE_CUDA):
@@ -48,7 +48,7 @@ def training_validation_loop(cfg, logger):
     # 1. Warmup
     teacher, classifier = TWarmup(cfg, teacher, classifier, metrics_monitors["TWMonitor"], logger)
     # 2 and 3 Representation Learning and Distillation
-    for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
+    for epoch in range(cfg.TRAIN.EPOCHS):
         # reset the metrics
         for m in metrics_monitors.values():
             m.reset()
@@ -66,11 +66,12 @@ def training_validation_loop(cfg, logger):
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
-                augmenter, aug_loss = ABatchTraining(augmenter, teacher, student, classifier, batch)
+                augmenter, aug_D_loss, aug_Ce_Loss = ABatchTraining(augmenter, teacher, student, classifier, batch)
                 with torch.no_grad():
-                    metrics_monitors["AMonitor"].metrics["loss"](aug_loss)
-                tepoch.set_postfix(rl_loss=rl_loss, aug_loss=aug_loss)
-            logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_loss": metrics_monitors["AMonitor"].metrics["loss"].compute(), "epoch": epoch, "phase": phase})
+                    metrics_monitors["AugDMonitor"].metrics["loss"](aug_D_loss)
+                    metrics_monitors["AugCeMonitor"].metrics["loss"](aug_Ce_Loss)
+                tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
+            logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["AugDMonitor"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["AugCeMonitor"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
         if cfg.DEBUG:
@@ -250,7 +251,7 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
     teacher.zero_grad()
     augmenter.zero_grad()
     classifier.zero_grad()
-    return augmenter, loss.item()
+    return augmenter, margin_loss.item(), cross_entropy.item()
 
 
 if __name__ == '__main__':
