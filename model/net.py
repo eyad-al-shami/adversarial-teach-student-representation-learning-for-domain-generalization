@@ -96,7 +96,7 @@ class Augmenter(nn.Module):
                     nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
                 ),
                 # norm_layer(nc),
-                nn.ReLU(True),
+                nn.Sigmoid(),
             ]
 
         self.backbone = nn.Sequential(*backbone)
