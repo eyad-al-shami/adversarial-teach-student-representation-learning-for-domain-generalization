@@ -89,17 +89,36 @@ class Augmenter(nn.Module):
                     use_bias=False,
                 )
             ]
+        self.backbone = nn.Sequential(*backbone)
         
         # adding the 1*1 last Conv layer
-        backbone += [
-                nn.Conv2d(
-                    nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
-                ),
-                # norm_layer(nc),
-                nn.Tanh(),
-            ]
+        # backbone += [
+        #         nn.Conv2d(
+        #             nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
+        #         ),
+        #         # norm_layer(nc),
+        #         nn.Tanh(),
+        #     ]
+        
+        self.gctx_fusion = None
+        
+        self.gctx_fusion = nn.Sequential(
+            nn.Conv2d(
+                2 * nc, nc, kernel_size=1, stride=1, padding=0, bias=False
+            ),
+            norm_layer(nc),
+            nn.ReLU(True),
+        )
 
-        self.backbone = nn.Sequential(*backbone)
+        self.regress = nn.Sequential(
+            nn.Conv2d(
+                nc, output_nc, kernel_size=1, stride=1, padding=0, bias=True
+            ),
+            nn.Tanh(),
+        )
+
+
+        
 
     def forward(self, x):
         """

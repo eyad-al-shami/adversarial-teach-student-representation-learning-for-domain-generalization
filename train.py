@@ -33,7 +33,7 @@ def training_validation_loop(cfg, logger):
     phase = 'training'
     # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
-    metrics_monitors = {"TWMonitor": net.Metrics_Monitor(cfg), "TSMonitor": net.Metrics_Monitor(cfg), "AugDMonitor": net.Metrics_Monitor(cfg), "AugCeMonitor": net.Metrics_Monitor(cfg)}
+    metrics_monitors = {"teacher_warmup_mm": net.Metrics_Monitor(cfg), "teacher_student_update_mm": net.Metrics_Monitor(cfg), "augmenter_discrepancy_mm": net.Metrics_Monitor(cfg), "augmenter_crossentropy_mm": net.Metrics_Monitor(cfg)}
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
     # move modules to GPU if available
     if (cfg.USE_CUDA):
@@ -46,7 +46,7 @@ def training_validation_loop(cfg, logger):
             for m in mm.metrics.values():
                 m.to(cfg.DEVICE)
     # 1. Warmup
-    teacher, classifier = TWarmup(cfg, teacher, classifier, metrics_monitors["TWMonitor"], logger)
+    teacher, classifier = teacher_warmup(cfg, teacher, classifier, metrics_monitors["teacher_warmup_mm"], logger)
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.TRAIN.EPOCHS):
         # reset the metrics
@@ -59,30 +59,30 @@ def training_validation_loop(cfg, logger):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, rl_loss = TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch)
+                student, rl_loss = teach_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch)
                 with torch.no_grad():
-                    metrics_monitors["TSMonitor"].metrics["loss"](rl_loss)
+                    metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
-                teacher = ema(teacher, student, cfg.MODEL.TEACHER.TAU)
+                teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
-                augmenter, aug_D_loss, aug_Ce_Loss = ABatchTraining(augmenter, teacher, student, classifier, batch)
+                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, batch)
                 with torch.no_grad():
-                    metrics_monitors["AugDMonitor"].metrics["loss"](aug_D_loss)
-                    metrics_monitors["AugCeMonitor"].metrics["loss"](aug_Ce_Loss)
+                    metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
+                    metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
             if cfg.LOGGING.ENABLED:
-                logger.log({"rl_loss":metrics_monitors["TSMonitor"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["AugDMonitor"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["AugCeMonitor"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
+                logger.log({"rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
         # reduce the learning rate after 30 epochs
         if cfg.DRY_RUN:
             break
-        t_acc = test_teacher(cfg, teacher, classifier)
-        logger.log({"teacher_acc": t_acc, "epoch": epoch, "phase": phase})
+        teacher_accuracy = test_teacher(cfg, teacher, classifier)
+        logger.log({"teacher_acc": teacher_accuracy, "epoch": epoch})
     return teacher, student, augmenter, classifier
 
 @torch.no_grad()
-def ema(teacher, student, keep_rate):
+def update_teacher(teacher, student, keep_rate):
     # with torch.no_grad():
     #     for teacher_param, student_param in zip(teacher.parameters(), student.parameters()):
     #         teacher_param.data *= tau
@@ -102,7 +102,7 @@ def ema(teacher, student, keep_rate):
     teacher.load_state_dict(new_teacher_dict)
     return teacher
 
-def TWarmup(cfg, teacher, classifier, m_monitor, logger):
+def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
     '''
         Warmup the teacher and the classifier
         params:
@@ -158,7 +158,7 @@ def TWarmup(cfg, teacher, classifier, m_monitor, logger):
     m_monitor.reset()
     return teacher, classifier
 
-def TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch):
+def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch):
     ''''
         Train the student model
         params:
@@ -212,7 +212,7 @@ def TSBatchTraining(augmenter, teacher, student, classifier, batch, epoch):
     
     return student, loss.item()
 
-def ABatchTraining(augmenter, teacher, student, classifier, batch):
+def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     ''''
         Train the augmenter model
         params:
