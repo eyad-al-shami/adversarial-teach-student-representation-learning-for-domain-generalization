@@ -96,7 +96,7 @@ class Augmenter(nn.Module):
                     nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
                 ),
                 # norm_layer(nc),
-                nn.Sigmoid(),
+                nn.Tanh(),
             ]
 
         self.backbone = nn.Sequential(*backbone)
@@ -163,7 +163,7 @@ def build_augmenter():
   norm_layer = functools.partial(
             nn.InstanceNorm2d, affine=False, track_running_stats=False
         )
-  net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer)
+  net = Augmenter(3, 3, nc=64, n_blocks=3)
   # init_network_weights(net, init_type="normal", gain=0.02)
   return net
 
