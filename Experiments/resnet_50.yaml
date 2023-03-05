@@ -1,0 +1,26 @@
+# USE_CUDA: False
+# DEVICE: "cpu"
+TRAIN:
+  EPOCHS: 60
+DATASET:
+  ROOT: "pacs"
+  DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
+  CLASSES: 7
+  SOURCE_DOMAINS: ["art_painting", "cartoon", "photo"]
+  TARGET_DOMAINS: ["sketch"]  
+  NORMALIZE: False
+  NAME: "PACS"
+  MEAN: [0.8158, 0.7974, 0.7717]
+  STD: [0.2895, 0.3015, 0.3315]
+LOGGING:
+  EXPERIMENT_NAME: "testing warmup"
+  WANDB:
+    ENABLE: False
+    PROJECT: "Adversarial-TS-DG"
+TRAIN:
+  BATCH_SIZE: 64
+MODEL:
+  AUGMENTER:
+    NORM_LAYER: "IN"
+  TEACHER:
+    BACKBONE_NAME: "resnet50"
