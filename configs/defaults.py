@@ -15,6 +15,7 @@ _C.SEED = 1337
 # E.g. trainer, dataset, and backbone
 _C.VERBOSE = True
 _C.DRY_RUN = False
+_C.OUTPUT_DIR = "saved_models"
 
 ###########################
 # System Hardware

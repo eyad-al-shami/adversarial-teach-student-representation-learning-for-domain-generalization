@@ -298,6 +298,12 @@ if __name__ == '__main__':
     # print a final summary of the experiment results using print.
     print("The teacher accuracy on the target domain is: ", teacher_acc)
 
+    # save all the models using save_checkpoint where the arguments are (state, is_best, checkpoint)
+    utils.save_checkpoint(teacher.state_dict(), False, cfg.OUTPUT_DIR)
+    utils.save_checkpoint(student.state_dict(), False, cfg.OUTPUT_DIR)
+    utils.save_checkpoint(augmenter.state_dict(), False, cfg.OUTPUT_DIR)
+    utils.save_checkpoint(classifier.state_dict(), False, cfg.OUTPUT_DIR)
+
     # # Set the logger
     # utils.set_logger(os.path.join(args.model_dir, 'train.log'))
 
