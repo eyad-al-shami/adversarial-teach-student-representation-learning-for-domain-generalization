@@ -83,7 +83,7 @@ def build_transforms(cfg, phase="train"):
 	tfms_list.append(transforms.ToTensor())
 
 	if cfg.DATASET.NORMALIZE:
-		tfms_list.append(transforms.Normalize(mean=cfg.DATASET[cfg.DATASET.NAME].MEAN, std=cfg.DATASET[cfg.DATASET.NAME].STD))
+		tfms_list.append(transforms.Normalize(mean=cfg.DATASET.NORMALIZE.MEAN, std=cfg.DATASET.NORMALIZE.STD))
 	
 	
 	tfms = transforms.Compose(tfms_list)

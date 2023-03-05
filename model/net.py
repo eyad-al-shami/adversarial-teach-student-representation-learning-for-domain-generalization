@@ -62,8 +62,6 @@ class Augmenter(nn.Module):
         norm_layer=nn.BatchNorm2d,
         use_dropout=False,
         padding_type="reflect",
-        gctx=True,
-        image_size=32,
     ):
         super().__init__()
 
