@@ -22,7 +22,7 @@ def create_componenets(cfg):
         3. The student model.
         4. The classification layer.
     """
-    augmenter = net.build_augmenter()
+    augmenter = net.build_augmenter(cfg=cfg)
     teacher = net.BackBone(cfg=cfg, component='teacher')
     student = net.BackBone(cfg=cfg, component='student')
     classifier = net.ClassifierLayer(cfg=cfg)

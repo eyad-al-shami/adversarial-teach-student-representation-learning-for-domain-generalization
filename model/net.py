@@ -159,14 +159,16 @@ class ClassifierLayer(nn.Module):
         for p in self.parameters():
             p.requires_grad = True
 
-def build_augmenter():
-  norm_layer = functools.partial(
-            nn.InstanceNorm2d, affine=False, track_running_stats=False
-        )
-  net = Augmenter(3, 3, nc=64, n_blocks=3)
-  # init_network_weights(net, init_type="normal", gain=0.02)
-  return net
-
+def build_augmenter(cfg):
+    if (cfg.MODEL.AUGMENTER.NORM_LAYER == "IN"):
+        norm_layer = functools.partial(
+                nn.InstanceNorm2d, affine=False, track_running_stats=False
+            )
+    else:
+        norm_layer = nn.BatchNorm2d
+    net = Augmenter(3, 3, nc=64, n_blocks=3)
+    # init_network_weights(net, init_type="normal", gain=0.02)
+    return net
 class Metrics_Monitor():
     def __init__(self, cfg) -> None:
         self.metrics = {}
