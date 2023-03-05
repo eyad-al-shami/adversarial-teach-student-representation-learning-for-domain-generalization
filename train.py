@@ -7,7 +7,7 @@ import torch
 import torch.optim as optim
 from tqdm import tqdm
 import numpy as np
-
+from collections import OrderedDict
 import utils
 import model.net as net
 from data import get_dataset
@@ -81,11 +81,25 @@ def training_validation_loop(cfg, logger):
         logger.log({"teacher_acc": t_acc, "epoch": epoch, "phase": phase})
     return teacher, student, augmenter, classifier
 
-def ema(teacher, student, tau):
-    with torch.no_grad():
-        for teacher_param, student_param in zip(teacher.parameters(), student.parameters()):
-            teacher_param.data *= tau
-            teacher_param.data += (1 - tau) * student_param.data
+@torch.no_grad()
+def ema(teacher, student, keep_rate):
+    # with torch.no_grad():
+    #     for teacher_param, student_param in zip(teacher.parameters(), student.parameters()):
+    #         teacher_param.data *= tau
+    #         teacher_param.data += (1 - tau) * student_param.data
+    # return teacher
+    student_model_dict = student.state_dict()
+    new_teacher_dict = OrderedDict()
+    for key, value in teacher.state_dict().items():
+        if key in student_model_dict.keys():
+            new_teacher_dict[key] = (
+                student_model_dict[key] *
+                (1 - keep_rate) + value * keep_rate
+            )
+        else:
+            raise Exception("{} is not found in student model".format(key))
+
+    teacher.load_state_dict(new_teacher_dict)
     return teacher
 
 def TWarmup(cfg, teacher, classifier, m_monitor, logger):
