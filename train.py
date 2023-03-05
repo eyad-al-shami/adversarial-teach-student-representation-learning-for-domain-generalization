@@ -12,7 +12,6 @@ import utils
 import model.net as net
 from data import get_dataset
 from sklearn.metrics.pairwise import euclidean_distances
-# from evaluate import evaluate
 
 def create_componenets(cfg):
     """
@@ -278,7 +277,6 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     classifier.zero_grad()
     return augmenter, margin_loss.item(), cross_entropy.item()
 
-# test the teacher after appending the classifier layer on the held-out domain and return the accuracy
 def test_teacher(cfg, teacher, classifier):
     _, target_data_loader = get_dataset(cfg, domains=cfg.DATASET.TARGET_DOMAINS)
     teacher.eval()
@@ -297,34 +295,21 @@ def test_teacher(cfg, teacher, classifier):
     return 100 * correct / total
 
 if __name__ == '__main__':
-
-    # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_cuda --use_wandb --experiment_name "testing the warmup process"
-    # python train.py --experiment_cfg Experiments/E1_No_Normalization.yaml --use_wandb --experiment_name "testing the warmup process" --debug
-    
     args = parser.parse_args()
     cfg = setup_cfg(args)
-    # Set the random seed for reproducible experiments
+
     utils.set_random_seed(cfg.SEED)
     print(cfg)
     logger = utils.set_logger(cfg)
     teacher, student, augmenter, classifier = training_validation_loop(cfg, logger)
     teacher_acc = test_teacher(cfg, teacher, classifier)
-    # print a final summary of the experiment results using print.
+
     print("The teacher accuracy on the target domain is: ", teacher_acc)
 
-    # save all the models using save_checkpoint where the arguments are (state, is_best, checkpoint)
     utils.save_checkpoint(teacher.state_dict(), False, cfg.OUTPUT_DIR)
     utils.save_checkpoint(student.state_dict(), False, cfg.OUTPUT_DIR)
     utils.save_checkpoint(augmenter.state_dict(), False, cfg.OUTPUT_DIR)
     utils.save_checkpoint(classifier.state_dict(), False, cfg.OUTPUT_DIR)
-
-    # # Set the logger
-    # utils.set_logger(os.path.join(args.model_dir, 'train.log'))
-
-    # # Train the model
-    # logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
-
-    # cfg.merge_from_list(opts)
 
 
 
