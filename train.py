@@ -253,7 +253,7 @@ def ABatchTraining(augmenter, teacher, student, classifier, batch):
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the augmenter
-    loss = -margin_loss + cross_entropy
+    loss = ((cfg.MODEL.AUGMENTER.DISCREPANCY_LOSS_WEIGHT - 1) * margin_loss) + (cfg.MODEL.AUGMENTER.DISCREPANCY_LOSS_WEIGHT * cross_entropy)
     loss.backward()
     optimizer.step()
     # zero the gradients
