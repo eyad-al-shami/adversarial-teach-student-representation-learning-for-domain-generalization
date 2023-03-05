@@ -100,8 +100,6 @@ class Augmenter(nn.Module):
         #         nn.Tanh(),
         #     ]
         
-        self.gctx_fusion = None
-        
         self.gctx_fusion = nn.Sequential(
             nn.Conv2d(
                 2 * nc, nc, kernel_size=1, stride=1, padding=0, bias=False
@@ -128,8 +126,16 @@ class Augmenter(nn.Module):
             return_p (bool): return perturbation.
             return_stn_output (bool): return the output of stn.
         """
+        input = x
         x = self.backbone(x)
-        return x
+        c = F.adaptive_avg_pool2d(x, (1, 1))
+        c = c.expand_as(x)
+        x = torch.cat([x, c], 1)
+        x = self.gctx_fusion(x)
+
+        p = self.regress(x)
+        x_p = input + p
+        return x_p
     
     def freeze(self):
         for p in self.parameters():

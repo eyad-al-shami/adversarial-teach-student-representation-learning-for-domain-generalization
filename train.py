@@ -248,12 +248,10 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     
     margin = torch.tensor(margin).to(cfg.DEVICE)
 
-    # compute the output of the augmenter
     augmented_data = augmenter(batch[0])
-    # compute the output of the student on the augmented data
     s_output = student(augmented_data)
-    # compute the output of the teacher on the original data
     t_output = teacher(batch[0])
+
     with torch.no_grad():
         t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
         s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
@@ -261,12 +259,11 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     s_output_normalized = s_output / s_output_magnitude
     discrepancy = t_output_normalized - s_output_normalized
     discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
-    # compute the minimum between 0 and the margin - discrepancy
+
     margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0))
-    # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
-    # compute the total loss and update the augmenter
-    loss = ((cfg.MODEL.AUGMENTER.DISCREPANCY_LOSS_WEIGHT - 1) * margin_loss) + (cfg.MODEL.AUGMENTER.DISCREPANCY_LOSS_WEIGHT * cross_entropy)
+    
+    loss = cross_entropy + margin_loss
     loss.backward()
     optimizer.step()
     # zero the gradients
