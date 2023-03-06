@@ -4,8 +4,8 @@ DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
   CLASSES: 7
-  SOURCE_DOMAINS: ["art_painting", "cartoon", "photo"]
-  TARGET_DOMAINS: ["sketch"]  
+  SOURCE_DOMAINS: ["art_painting", "cartoon", "sketch"]
+  TARGET_DOMAINS: ["photo"]  
   NORMALIZE: False
   NAME: "PACS"
   MEAN: [0.8158, 0.7974, 0.7717]
