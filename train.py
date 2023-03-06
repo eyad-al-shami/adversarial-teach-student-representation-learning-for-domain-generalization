@@ -194,8 +194,8 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
     # t_output_normalized = t_output / t_output_magnitude
     # s_output_normalized = s_output / s_output_magnitude
 
-    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1, keepdim=True)
-    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1, keepdim=True)
+    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
+    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
 
     discrepancy = t_output_normalized - s_output_normalized
     # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
@@ -264,8 +264,8 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     # t_output_normalized = t_output / t_output_magnitude
     # s_output_normalized = s_output / s_output_magnitude
 
-    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1, keepdim=True)
-    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1, keepdim=True)
+    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
+    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
 
     discrepancy = t_output_normalized - s_output_normalized
     # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
