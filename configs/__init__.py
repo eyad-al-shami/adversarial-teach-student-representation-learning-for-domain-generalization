@@ -62,7 +62,7 @@ def merge_args_cfg(cfg, args):
 
 def setup_cfg(args):
     cfg = get_cfg_defaults()
-
+    
     # 1. From experiment config file
     if args.experiment_cfg:
         cfg.merge_from_file(args.experiment_cfg)

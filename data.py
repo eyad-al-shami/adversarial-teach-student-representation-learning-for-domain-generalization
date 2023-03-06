@@ -100,3 +100,14 @@ def get_dataset(cfg, phase="train", domains=[]):
 	else:
 		raise NotImplementedError
 	return train_dataset, train_loader
+
+if (__name__ == "__main__"):
+	# test the dataset
+
+	from configs import get_cfg_defaults
+	from utils import show_batch
+	cfg = get_cfg_defaults()
+	cfg.merge_from_file(r"Experiments/testing_the_data.yaml")
+	dataset, loader = get_dataset(cfg, phase="train", domains=["sketch", "photo"])
+	batch = next(iter(loader))
+	show_batch(batch, dataset)

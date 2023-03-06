@@ -152,3 +152,21 @@ class OnlineMeanStd:
                 cnt += nb_pixels
 
             return fst_moment, torch.sqrt(snd_moment - fst_moment ** 2)
+        
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+import torchvision.transforms.functional as F
+from torchvision.utils import make_grid
+from torchvision.io import read_image
+from pathlib import Path
+
+plt.rcParams["savefig.bbox"] = 'tight'
+
+def show_batch(batch, dataset):
+    fig, ax = plt.subplots(1, batch[0].shape[0], figsize=(20, 20))
+    for i in range(batch[0].shape[0]):
+        ax[i].imshow(batch[0][i].permute(1, 2, 0), interpolation='nearest')
+        ax[i].set_title(dataset.index_to_class[batch[2][i].item()])
+        ax[i].axis('off')
+    plt.show()
