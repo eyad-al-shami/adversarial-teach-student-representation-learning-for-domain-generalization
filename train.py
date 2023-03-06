@@ -278,7 +278,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
     # discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2)
     discrepancy_loss = torch.pow(discrepancy, 2).sum(1)
-    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).sum()
+    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).mean()
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     
     loss = - margin_loss + cross_entropy 
