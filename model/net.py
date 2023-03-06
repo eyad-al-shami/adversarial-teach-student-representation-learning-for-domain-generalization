@@ -189,7 +189,7 @@ def build_augmenter(cfg):
             )
     else:
         norm_layer = nn.BatchNorm2d
-    net = Augmenter(3, 3, nc=64, n_blocks=3)
+    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer)
     # init_network_weights(net, init_type="normal", gain=0.02)
     return net
 class Metrics_Monitor():
