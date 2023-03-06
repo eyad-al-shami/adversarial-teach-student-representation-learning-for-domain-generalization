@@ -200,7 +200,8 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
 
     discrepancy = t_output_normalized - s_output_normalized
     # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
-    discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2).mean()
+    # discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2).mean()
+    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).sum()
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the student
@@ -269,8 +270,9 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
 
     discrepancy = t_output_normalized - s_output_normalized
     # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
-    discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2)
-    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).mean()
+    # discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2)
+    discrepancy_loss = torch.pow(discrepancy, 2).sum(1)
+    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).sum()
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     
     loss = - margin_loss + cross_entropy 
