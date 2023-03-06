@@ -189,13 +189,18 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
     t_output = teacher(batch[0])
     # then pass the augmented_data through the student
     s_output = student(augmented_data)
-    with torch.no_grad():
-        t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
-        s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
-    t_output_normalized = t_output / t_output_magnitude
-    s_output_normalized = s_output / s_output_magnitude
+    # with torch.no_grad():
+    #     t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
+    #     s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
+    # t_output_normalized = t_output / t_output_magnitude
+    # s_output_normalized = s_output / s_output_magnitude
+
+    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1, keepdim=True)
+    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1, keepdim=True)
+
     discrepancy = t_output_normalized - s_output_normalized
-    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
+    # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
+    discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2).mean()
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the student
@@ -252,14 +257,19 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     s_output = student(augmented_data)
     t_output = teacher(batch[0])
 
-    with torch.no_grad():
-        t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
-        s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
-    t_output_normalized = t_output / t_output_magnitude
-    s_output_normalized = s_output / s_output_magnitude
-    discrepancy = t_output_normalized - s_output_normalized
-    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
+    # with torch.no_grad():
+    #     t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
+    #     s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
+        
+    # t_output_normalized = t_output / t_output_magnitude
+    # s_output_normalized = s_output / s_output_magnitude
 
+    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1, keepdim=True)
+    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1, keepdim=True)
+
+    discrepancy = t_output_normalized - s_output_normalized
+    # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
+    discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2)
     margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).mean()
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     
