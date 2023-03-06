@@ -181,9 +181,8 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
     if epoch == 30:
         for param_group in optimizer.param_groups:
             param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
-        print(f"\nReducing the learning rate to {cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY}.\n")
-    cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
+    cross_entropy_loss = torch.nn.CrossEntropyLoss()
     # first pass the input through the augmenter and the teacher
     augmented_data = augmenter(batch[0])
     t_output = teacher(batch[0])
