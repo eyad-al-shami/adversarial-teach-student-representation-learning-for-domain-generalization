@@ -175,7 +175,7 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
     augmenter.freeze()
     teacher.freeze() # No need to accumulate gradients to make training faster
     # put teacher and student in train mode
-    teacher.train()
+    teacher.eval()
     student.train()
     optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
     if epoch == 30:
