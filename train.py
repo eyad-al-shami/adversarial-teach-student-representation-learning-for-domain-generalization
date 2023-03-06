@@ -44,8 +44,15 @@ def training_validation_loop(cfg, logger):
         for mm in metrics_monitors.values():
             for m in mm.metrics.values():
                 m.to(cfg.DEVICE)
+    t_acc_before_warmup = test_teacher(cfg, teacher, classifier)
     # 1. Warmup
     teacher, classifier = teacher_warmup(cfg, teacher, classifier, metrics_monitors["teacher_warmup_mm"], logger)
+    t_acc_after_warmup = test_teacher(cfg, teacher, classifier)
+    # print the accuracy of the teacher before and after the warmup using print and + and - signs to make it more readable
+    print("+"*50)
+    print(f"+      Teacher Accuracy Before Warmup: {t_acc_before_warmup}       +")
+    print(f"+      Teacher Accuracy After Warmup: {t_acc_after_warmup}         +")
+    print("+"*50)
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.TRAIN.EPOCHS):
         # reset the metrics
@@ -200,7 +207,7 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
     discrepancy = t_output_normalized - s_output_normalized
     # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
     # discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2).mean()
-    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).sum()
+    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean()
     # compute the cross entropy loss between the student output and the target
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     # compute the total loss and update the student
