@@ -125,7 +125,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
     # get the parameters of both the backbone and the classifier
     merged_parameters = utils.merge_parameters([teacher, classifier])
 
-    optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum=0.9)
+    optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR)
     criterion = torch.nn.CrossEntropyLoss()
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
 
@@ -231,7 +231,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     teacher.eval()
     student.eval()
 
-    optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR, momentum=0.9)
+    optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
     cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     # compute the centroids of domains in the batch
