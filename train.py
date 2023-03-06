@@ -65,7 +65,7 @@ def training_validation_loop(cfg, logger):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, rl_loss = teach_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch)
+                student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch)
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
@@ -164,7 +164,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
     m_monitor.reset()
     return teacher, classifier
 
-def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch):
+def teacher_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch):
     ''''
         Train the student model
         params:
@@ -193,28 +193,20 @@ def teach_studnet_batch_training(augmenter, teacher, student, classifier, batch,
     # first pass the input through the augmenter and the teacher
     augmented_data = augmenter(batch[0])
     t_output = teacher(batch[0])
-    # then pass the augmented_data through the student
     s_output = student(augmented_data)
-    # with torch.no_grad():
-    #     t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
-    #     s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
-    # t_output_normalized = t_output / t_output_magnitude
-    # s_output_normalized = s_output / s_output_magnitude
 
     t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
     s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
 
     discrepancy = t_output_normalized - s_output_normalized
-    # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
-    # discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2).mean()
-    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean()
-    # compute the cross entropy loss between the student output and the target
+    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).sum()
+    
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
-    # compute the total loss and update the student
+    
     loss = cross_entropy + discrepancy_loss
     loss.backward()
     optimizer.step()
-    # zero the gradients
+
     optimizer.zero_grad()
     student.zero_grad()
     teacher.zero_grad()
@@ -264,26 +256,19 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     s_output = student(augmented_data)
     t_output = teacher(batch[0])
 
-    # with torch.no_grad():
-    #     t_output_magnitude = torch.linalg.vector_norm(t_output, dim=1, keepdim=True)
-    #     s_output_magnitude = torch.linalg.vector_norm(s_output, dim=1, keepdim=True)
-        
-    # t_output_normalized = t_output / t_output_magnitude
-    # s_output_normalized = s_output / s_output_magnitude
-
     t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
     s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
 
     discrepancy = t_output_normalized - s_output_normalized
-    # discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
-    # discrepancy_loss = (torch.linalg.norm(discrepancy, dim=1)**2)
     discrepancy_loss = torch.pow(discrepancy, 2).sum(1)
-    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).mean()
+    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).sum()
+
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     
     loss = - margin_loss + cross_entropy 
     loss.backward()
     optimizer.step()
+    
     # zero the gradients
     optimizer.zero_grad()
     student.zero_grad()
