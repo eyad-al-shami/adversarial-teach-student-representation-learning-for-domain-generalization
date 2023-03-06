@@ -92,8 +92,8 @@ def update_teacher(teacher, student, keep_rate):
     for key, value in teacher.state_dict().items():
         if key in student_model_dict.keys():
             new_teacher_dict[key] = (
-                student_model_dict[key] *
-                (1 - keep_rate) + value * keep_rate
+                (student_model_dict[key] *
+                (1 - keep_rate)) + (value * keep_rate)
             )
         else:
             raise Exception("{} is not found in student model".format(key))
@@ -258,9 +258,9 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     t_output_normalized = t_output / t_output_magnitude
     s_output_normalized = s_output / s_output_magnitude
     discrepancy = t_output_normalized - s_output_normalized
-    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy).mean()
+    discrepancy_loss = torch.einsum('ij, ij -> i', discrepancy, discrepancy)
 
-    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0))
+    margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).sum()
     cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
     
     loss = cross_entropy + margin_loss
