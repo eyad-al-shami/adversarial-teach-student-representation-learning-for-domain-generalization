@@ -195,7 +195,6 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, batc
         for param_group in optimizer.param_groups:
             param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
 
-    cross_entropy_loss = torch.nn.CrossEntropyLoss()
     # first pass the input through the augmenter and the teacher
     augmented_data = augmenter(batch[0])
     t_output = teacher(batch[0])
@@ -207,7 +206,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, batc
     discrepancy = t_output_normalized - s_output_normalized
     discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean()
     
-    loss = cross_entropy_loss(classifier(s_output), batch[2]) + discrepancy_loss
+    loss = torch.nn.functional.cross_entropy(classifier(s_output), batch[2]) + discrepancy_loss
     loss.backward()
     optimizer.step()
 
@@ -240,7 +239,6 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     student.eval()
 
     optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
-    cross_entropy_loss = torch.nn.CrossEntropyLoss()
 
     # compute the centroids of domains in the batch
     with torch.no_grad():
@@ -267,7 +265,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
     discrepancy_loss = torch.pow(discrepancy, 2).sum(1)
     margin_loss = torch.min(discrepancy_loss - margin, torch.tensor(0)).mean()
 
-    cross_entropy = cross_entropy_loss(classifier(s_output), batch[2])
+    cross_entropy = torch.nn.functional.cross_entropy(classifier(s_output), batch[2])
     
     loss = (-margin_loss) + cross_entropy
     loss.backward()
