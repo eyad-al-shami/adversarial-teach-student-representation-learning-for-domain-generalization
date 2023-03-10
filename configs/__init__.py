@@ -23,14 +23,12 @@ def merge_args_cfg(cfg, args):
     if args.data_dir:
         cfg.DATASET.ROOT = args.data_dir
 
-    if args.output_dir:
-        
-        cfg.OUTPUT_DIR = args.output_dir if args.output_dir else cfg.LOGGING.EXPERIMENT_NAME
-        # remove andy characters from the output directory name that may cause problems
-        cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.replace(":", "=")
-        cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.replace(" ", "_")
-        invalid = '<>:"/\|?*'
-        cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.translate({ord(c): None for c in invalid})
+    cfg.OUTPUT_DIR = args.output_dir if args.output_dir else cfg.LOGGING.EXPERIMENT_NAME
+    # remove andy characters from the output directory name that may cause problems
+    cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.replace(":", "=")
+    cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.replace(" ", "_")
+    invalid = '<>:"/\|?*'
+    cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.translate({ord(c): None for c in invalid})
 
 
 
