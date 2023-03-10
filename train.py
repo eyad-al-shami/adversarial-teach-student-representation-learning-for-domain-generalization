@@ -35,7 +35,7 @@ def training_validation_loop(cfg, logger):
     metrics_monitors = {"teacher_warmup_mm": net.Metrics_Monitor(cfg), "teacher_student_update_mm": net.Metrics_Monitor(cfg), "augmenter_discrepancy_mm": net.Metrics_Monitor(cfg), "augmenter_crossentropy_mm": net.Metrics_Monitor(cfg)}
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
     tau_updater = utils.EMAWeight(0.99999, 0.999)
-    TAU = tau_updater.get_value()
+    TAU = 0.99999
     # move modules to GPU if available
     if (cfg.USE_CUDA):
         augmenter = augmenter.to(cfg.DEVICE)
