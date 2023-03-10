@@ -152,7 +152,30 @@ class OnlineMeanStd:
                 cnt += nb_pixels
 
             return fst_moment, torch.sqrt(snd_moment - fst_moment ** 2)
-        
+
+class EMAWeight:
+    def __init__(self, start_value, final_value):
+        '''
+        start_value: the value to start at
+        final_value: the value to end at
+        Example: Decay(0.999999, 0.999)
+        '''
+        if (start_value < final_value):
+            raise ValueError("start_value must be >= final_value")
+        self.value = str(start_value)
+        self.final_value = str(final_value)
+        self.count = 0
+
+    def step(self):
+        if (self.count == 0):
+            self.count -= 1
+            return float(self.value)
+        if (self.value[:self.count] == self.final_value):
+            return float(self.value[:self.count])
+        returned_value = float(self.value[:self.count])
+        self.count -= 1
+        return returned_value
+
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
