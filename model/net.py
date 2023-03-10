@@ -68,14 +68,14 @@ class Augmenter(nn.Module):
         backbone = []
 
         p = 0
-        backbone += [nn.ReflectionPad2d(1)]
         backbone += [
+            nn.ReflectionPad2d(1),
             nn.Conv2d(
-                input_nc, nc, kernel_size=3, stride=1, padding=p, bias=False
-            )
+                input_nc, nc, kernel_size=1, stride=1, padding=p, bias=False
+            ),
+            norm_layer(nc),
+            nn.ReLU(True)
         ]
-        backbone += [norm_layer(nc)]
-        backbone += [nn.ReLU(True)]
 
         for _ in range(n_blocks):
             backbone += [
@@ -126,14 +126,15 @@ class Augmenter(nn.Module):
         """
         input = x
         x = self.backbone(x)
-        c = F.adaptive_avg_pool2d(x, (1, 1))
-        c = c.expand_as(x)
-        x = torch.cat([x, c], 1)
-        x = self.gctx_fusion(x)
+        # c = F.adaptive_avg_pool2d(x, (1, 1))
+        # c = c.expand_as(x)
+        # x = torch.cat([x, c], 1)
+        # x = self.gctx_fusion(x)
 
         p = self.regress(x)
-        x_p = input + p
-        return x_p
+        # x_p = input + p
+        # return x_p
+        return p
     
     def freeze(self):
         for p in self.parameters():
