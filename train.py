@@ -34,8 +34,6 @@ def training_validation_loop(cfg, logger):
     augmenter, teacher, student, classifier = create_componenets(cfg)
     metrics_monitors = {"teacher_warmup_mm": net.Metrics_Monitor(cfg), "teacher_student_update_mm": net.Metrics_Monitor(cfg), "augmenter_discrepancy_mm": net.Metrics_Monitor(cfg), "augmenter_crossentropy_mm": net.Metrics_Monitor(cfg)}
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
-    tau_updater = utils.EMAWeight(0.99999, 0.999)
-    TAU = 0.99999
     # move modules to GPU if available
     if (cfg.USE_CUDA):
         augmenter = augmenter.to(cfg.DEVICE)
@@ -61,9 +59,6 @@ def training_validation_loop(cfg, logger):
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.TRAIN.EPOCHS):
         # update the teacher distillation rate
-        if (epoch % 15 == 0):
-            TAU = tau_updater.get_value()
-            print(f"\n Teacher Distillation Rate: {TAU} \n")
         # reset the metrics
         for m in metrics_monitors.values():
             m.reset()
@@ -84,7 +79,7 @@ def training_validation_loop(cfg, logger):
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
-                teacher = update_teacher(teacher, student, TAU)
+                teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
                 augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, a_optimizer, batch)
                 with torch.no_grad():

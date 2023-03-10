@@ -99,9 +99,9 @@ class Augmenter(nn.Module):
 
         self.regress = nn.Sequential(
             nn.Conv2d(
-                nc, output_nc, kernel_size=1, stride=1, padding=0, bias=True
+                nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
             ),
-            nn.Tanh(),
+            nn.Sigmoid(),
         )
 
 
