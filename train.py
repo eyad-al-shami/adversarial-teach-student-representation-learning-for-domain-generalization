@@ -305,10 +305,10 @@ if __name__ == '__main__':
 
     print("The teacher accuracy on the target domain is: ", teacher_acc)
 
-    utils.save_checkpoint(teacher.state_dict(), False, cfg.OUTPUT_DIR)
-    utils.save_checkpoint(student.state_dict(), False, cfg.OUTPUT_DIR)
-    utils.save_checkpoint(augmenter.state_dict(), False, cfg.OUTPUT_DIR)
-    utils.save_checkpoint(classifier.state_dict(), False, cfg.OUTPUT_DIR)
+    utils.save_checkpoint(teacher.state_dict(), False, cfg.OUTPUT_DIR, name="teacher.pth")
+    utils.save_checkpoint(student.state_dict(), False, cfg.OUTPUT_DIR, name="student.pth")
+    utils.save_checkpoint(augmenter.state_dict(), False, cfg.OUTPUT_DIR, name="augmenter.pth")
+    utils.save_checkpoint(classifier.state_dict(), False, cfg.OUTPUT_DIR, name="classifier.pth")
 
 
 
