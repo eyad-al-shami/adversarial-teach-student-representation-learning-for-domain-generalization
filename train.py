@@ -69,8 +69,9 @@ def training_validation_loop(cfg, logger):
             m.reset()
         # reduce the learning rate after 30 epochs
         if epoch == 30:
-            for param_group in [s_optimizer.param_groups, a_optimizer.param_groups]:
-                param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
+            for optimizer_ in [s_optimizer.param_groups, a_optimizer.param_groups]:
+                for param_group in optimizer_:
+                    param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
     
         with tqdm(train_loader, unit="batch") as tepoch:
             for batch in tepoch:
