@@ -1,5 +1,3 @@
-TRAIN:
-  EPOCHS: 1
 DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
@@ -17,6 +15,7 @@ LOGGING:
     PROJECT: "Adversarial-TS-DG"
 TRAIN:
   BATCH_SIZE: 64
+  EPOCHS: 1
 MODEL:
   TEACHER:
     WARMUP_EPOCHS: 1
