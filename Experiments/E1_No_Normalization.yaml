@@ -4,8 +4,8 @@ DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
   CLASSES: 7
-  SOURCE_DOMAINS: ["art_painting", "cartoon", "photo"]
-  TARGET_DOMAINS: ["sketch"]
+  SOURCE_DOMAINS: ["art_painting", "sketch", "photo"]
+  TARGET_DOMAINS: ["cartoon"]
   NORMALIZE: False
   NAME: "PACS"
   MEAN: [0.8158, 0.7974, 0.7717]
@@ -16,12 +16,12 @@ LOGGING:
     ENABLE: False
     PROJECT: "Adversarial-TS-DG"
 TRAIN:
-  BATCH_SIZE: 32
+  BATCH_SIZE: 64
 MODEL:
   AUGMENTER:
     NORM_LAYER: "IN"
-    LR: 0.005
+    LR: 0.0008
   TEACHER:
-    TAU: 0.99999
+    TAU: 0.9999
     WARMUP_EPOCHS: 20
-    WARMUP_LR: 0.003
+    WARMUP_LR: 0.001
