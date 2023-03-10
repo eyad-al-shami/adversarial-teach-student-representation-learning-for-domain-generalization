@@ -1,7 +1,5 @@
-# USE_CUDA: False
-# DEVICE: "cpu"
 TRAIN:
-  EPOCHS: 60
+  EPOCHS: 1
 DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
@@ -19,3 +17,6 @@ LOGGING:
     PROJECT: "Adversarial-TS-DG"
 TRAIN:
   BATCH_SIZE: 8
+MODEL:
+  TEACHER:
+    WARMUP_EPOCHS: 1

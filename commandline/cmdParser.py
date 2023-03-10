@@ -3,7 +3,7 @@ import utils
 
 parser  =  argparse.ArgumentParser()
 
-parser.add_argument('--experiment_name', default = "lr", help = "Name of the experiment")
+parser.add_argument('--experiment_name', default = None, help = "Name of the experiment")
 parser.add_argument('--data_dir', default = None, help = "Directory containing the dataset")
 parser.add_argument('--output_dir', default = None, help = "Directory to save outputs")
 parser.add_argument('--restore_file', default = None, help = "Optional, name of the file in --model_dir containing weights to reload before training")  # 'best' or 'train'
