@@ -166,7 +166,7 @@ class EMAWeight:
         self.final_value = str(final_value)
         self.count = 0
 
-    def step(self):
+    def get_value(self):
         if (self.count == 0):
             self.count -= 1
             return float(self.value)
