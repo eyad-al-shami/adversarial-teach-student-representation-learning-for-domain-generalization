@@ -16,7 +16,7 @@ def set_random_seed(seed):
 def get_readable_date_time():
     import datetime
     now = datetime.datetime.now()
-    return now.strftime("%Y-%m-%d_%H-%M-%S")
+    return now.strftime("%Y-%m-%d_%H-%M")
 
 def merge_parameters(models):
     """Merge the parameters of the models in the list models into a single list of parameters.
