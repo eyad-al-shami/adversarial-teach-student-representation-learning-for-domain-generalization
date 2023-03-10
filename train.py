@@ -84,7 +84,8 @@ def training_validation_loop(cfg, logger):
         if cfg.DRY_RUN:
             break
         teacher_accuracy = test_teacher(cfg, teacher, classifier)
-        logger.log({"teacher_acc": teacher_accuracy, "epoch": epoch})
+        if cfg.LOGGING.ENABLED:
+            logger.log({"teacher_acc": teacher_accuracy, "epoch": epoch})
     return teacher, student, augmenter, classifier
 
 @torch.no_grad()
