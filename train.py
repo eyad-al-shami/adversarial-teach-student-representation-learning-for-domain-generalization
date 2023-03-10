@@ -55,14 +55,23 @@ def training_validation_loop(cfg, logger):
     print(f"+      Teacher Accuracy Before Warmup: {t_acc_before_warmup}       +")
     print(f"+      Teacher Accuracy After Warmup: {t_acc_after_warmup}         +")
     print("+"*50)
+
+    s_optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
+    a_optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.TRAIN.EPOCHS):
-        # reset the metrics
+        # update the teacher distillation rate
         if (epoch % 15 == 0):
             TAU = tau_updater.get_value()
             print(f"\n Teacher Distillation Rate: {TAU} \n")
+        # reset the metrics
         for m in metrics_monitors.values():
             m.reset()
+        # reduce the learning rate after 30 epochs
+        if epoch == 30:
+            for param_group in [s_optimizer.param_groups, a_optimizer.param_groups]:
+                param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
+    
         with tqdm(train_loader, unit="batch") as tepoch:
             for batch in tepoch:
                 tepoch.set_description(f"Epoch {epoch}")
@@ -70,13 +79,13 @@ def training_validation_loop(cfg, logger):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
                 # 2. Representation Learning
                 # 2.1. Update the student
-                student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch)
+                student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, s_optimizer, batch, epoch)
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = update_teacher(teacher, student, TAU)
                 # 3. update the augmenter
-                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, batch)
+                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, a_optimizer, batch)
                 with torch.no_grad():
                     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
@@ -170,7 +179,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
     m_monitor.reset()
     return teacher, classifier
 
-def teacher_studnet_batch_training(augmenter, teacher, student, classifier, batch, epoch):
+def teacher_studnet_batch_training(augmenter, teacher, student, classifier, optimizer, batch, epoch):
     ''''
         Train the student model
         params:
@@ -190,10 +199,11 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, batc
     # put teacher and student in train mode
     teacher.eval()
     student.train()
-    optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
-    if epoch == 30:
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
+    # zero optimizer
+    optimizer.zero_grad()
+
+    # optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
+    
 
     # first pass the input through the augmenter and the teacher
     augmented_data = augmenter(batch[0])
@@ -218,7 +228,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, batc
     
     return student, loss.item()
 
-def augmenter_batch_training(augmenter, teacher, student, classifier, batch):
+def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer, batch):
     ''''
         Train the augmenter model
         params:
