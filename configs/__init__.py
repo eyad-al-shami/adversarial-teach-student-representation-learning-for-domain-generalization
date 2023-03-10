@@ -17,13 +17,22 @@ def merge_args_cfg(cfg, args):
         # If the experiment name is not provided, then use the date and time
         if (args.experiment_name and args.experiment_name.lower() == "lr"):
             cfg.LOGGING.EXPERIMENT_NAME = f"A: {cfg.MODEL.AUGMENTER.LR} - TAU: {cfg.MODEL.TEACHER.TAU} - TW: {cfg.MODEL.TEACHER.WARMUP_LR} - S: {cfg.MODEL.STUDENT.LR} - {utils.get_readable_date_time()}"
-        cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
+        else:
+            cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
 
     if args.data_dir:
         cfg.DATASET.ROOT = args.data_dir
 
     if args.output_dir:
-        cfg.OUTPUT_DIR = args.output_dir
+        
+        cfg.OUTPUT_DIR = args.output_dir if args.output_dir else cfg.LOGGING.EXPERIMENT_NAME
+        # remove andy characters from the output directory name that may cause problems
+        cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.replace(":", "=")
+        cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.replace(" ", "_")
+        invalid = '<>:"/\|?*'
+        cfg.OUTPUT_DIR = cfg.OUTPUT_DIR.translate({ord(c): None for c in invalid})
+
+
 
     # if args.restore_file:
     #     cfg.RESUME = args.restore_file
