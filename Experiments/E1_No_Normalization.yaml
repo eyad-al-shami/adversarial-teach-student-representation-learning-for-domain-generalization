@@ -1,5 +1,5 @@
 TRAIN:
-  EPOCHS: 60
+  EPOCHS: 30
 DATASET:
   ROOT: "pacs"
   DOMAINS: ["sketch", "photo", "art_painting", "cartoon"]
@@ -20,9 +20,9 @@ TRAIN:
 MODEL:
   AUGMENTER:
     NORM_LAYER: "IN"
-    LR: 0.00005
+    LR: 0.0005
   TEACHER:
-    TAU: 0.999999
+    TAU: 0.99995
     WARMUP_EPOCHS: 15
     WARMUP_LR: 0.003
   STUDENT:

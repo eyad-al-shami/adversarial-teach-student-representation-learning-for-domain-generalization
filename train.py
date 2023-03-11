@@ -63,7 +63,7 @@ def training_validation_loop(cfg, logger):
         for m in metrics_monitors.values():
             m.reset()
         # reduce the learning rate after 30 epochs
-        if epoch == 30:
+        if epoch == 20:
             for optimizer_ in [s_optimizer.param_groups, a_optimizer.param_groups]:
                 for param_group in optimizer_:
                     param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
@@ -79,7 +79,8 @@ def training_validation_loop(cfg, logger):
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
-                teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
+                if (epoch >= 10):
+                    teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
                 augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, a_optimizer, batch)
                 with torch.no_grad():
