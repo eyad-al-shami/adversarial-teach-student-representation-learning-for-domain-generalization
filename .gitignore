@@ -3,4 +3,4 @@ TODELETE.py
 *.zip
 pacs/
 wandb
-**/__pycache__
+__pycache__/
