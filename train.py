@@ -126,7 +126,7 @@ def update_teacher(teacher, student, keep_rate):
             print(s_name)
             for key, value in s_module.state_dict().items():
                 # update the teacher model with the student model and a kee_prob of 0.999
-                new_teacher_dict[f"{s_name}.{key}"] = (0.999 * value) + (0.001 * new_teacher_dict[f"{s_name}.{key}"])
+                new_teacher_dict[f"{s_name}.{key}"] = ((1-keep_rate) * value) + (keep_rate * new_teacher_dict[f"{s_name}.{key}"])
 
     teacher.load_state_dict(new_teacher_dict)
     return teacher
