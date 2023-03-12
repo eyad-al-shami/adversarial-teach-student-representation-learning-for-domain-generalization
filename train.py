@@ -54,8 +54,8 @@ def training_validation_loop(cfg, logger):
     print(f"+      Teacher Accuracy After Warmup: {t_acc_after_warmup}         +")
     print("+"*50)
 
-    s_optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
-    a_optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
+    s_optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR, momentum = 0.9)
+    a_optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR, momentum = 0.9)
     # 2 and 3 Representation Learning and Distillation
     for epoch in range(cfg.TRAIN.EPOCHS):
         # update the teacher distillation rate
@@ -144,7 +144,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
     # get the parameters of both the backbone and the classifier
     merged_parameters = utils.merge_parameters([teacher, classifier])
 
-    optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR)
+    optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR, momentum = 0.9)
     criterion = torch.nn.CrossEntropyLoss()
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
 
@@ -170,7 +170,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
                 logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
         if cfg.DRY_RUN:
             break
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_ton_none=True)
     teacher.zero_grad()
     classifier.zero_grad()
     m_monitor.reset()
@@ -217,7 +217,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     loss.backward()
     optimizer.step()
 
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_ton_none=True)
     student.zero_grad()
     teacher.zero_grad()
     augmenter.zero_grad()
@@ -283,7 +283,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     optimizer.step()
     
     # zero the gradients
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_ton_none=True)
     student.zero_grad()
     teacher.zero_grad()
     augmenter.zero_grad()
