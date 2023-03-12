@@ -105,28 +105,15 @@ def update_teacher(teacher, student, keep_rate):
     #         teacher_param.data *= tau
     #         teacher_param.data += (1 - tau) * student_param.data
     # return teacher
-    # student_model_dict = student.state_dict()
-    # new_teacher_dict = OrderedDict()
-    # for key, value in teacher.state_dict().items():
-    #     if key in student_model_dict.keys():
-    #         new_teacher_dict[key] = (
-    #             (student_model_dict[key] *
-    #             (1 - keep_rate)) + (value * keep_rate)
-    #         )
-    #     else:
-    #         raise Exception("{} is not found in student model".format(key))
-
-    # teacher.load_state_dict(new_teacher_dict)
-    # return teacher
-    layers = ['conv1', 'bn1', 'layer1', 'layer2', 'layer3']
-
+    student_model_dict = student.state_dict()
     new_teacher_dict = teacher.state_dict().copy()
-    for (s_name, s_module) in student.named_modules():
-        if (s_name in layers):
-            print(s_name)
-            for key, value in s_module.state_dict().items():
-                # update the teacher model with the student model and a kee_prob of 0.999
-                new_teacher_dict[f"{s_name}.{key}"] = ((1-keep_rate) * value) + (keep_rate * new_teacher_dict[f"{s_name}.{key}"])
+    layers = ['conv1', 'bn1', 'layer1', 'layer2', 'layer3']
+    for key, value in teacher.state_dict().items():
+        if any([layer in key for layer in layers]):
+            new_teacher_dict[key] = (
+                (student_model_dict[key] *
+                (1 - keep_rate)) + (value * keep_rate)
+            )
 
     teacher.load_state_dict(new_teacher_dict)
     return teacher
