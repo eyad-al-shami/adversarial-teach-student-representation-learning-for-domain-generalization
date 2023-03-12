@@ -79,8 +79,7 @@ def training_validation_loop(cfg, logger):
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
-                if (epoch >= 10):
-                    teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
+                teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
                 augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, a_optimizer, batch)
                 with torch.no_grad():
