@@ -118,7 +118,7 @@ def update_teacher(teacher, student, keep_rate):
 
     # teacher.load_state_dict(new_teacher_dict)
     # return teacher
-    layers = ['conv1', 'bn1', 'layer1', 'layer2']
+    layers = ['conv1', 'bn1', 'layer1', 'layer2', 'layer3']
 
     new_teacher_dict = teacher.state_dict().copy()
     for (s_name, s_module) in student.named_modules():
