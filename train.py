@@ -170,7 +170,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
                 logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
         if cfg.DRY_RUN:
             break
-    optimizer.zero_grad(set_ton_none=True)
+    optimizer.zero_grad(set_to_none=True)
     teacher.zero_grad()
     classifier.zero_grad()
     m_monitor.reset()
@@ -217,7 +217,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     loss.backward()
     optimizer.step()
 
-    optimizer.zero_grad(set_ton_none=True)
+    optimizer.zero_grad(set_to_none=True)
     student.zero_grad()
     teacher.zero_grad()
     augmenter.zero_grad()
@@ -283,7 +283,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     optimizer.step()
     
     # zero the gradients
-    optimizer.zero_grad(set_ton_none=True)
+    optimizer.zero_grad(set_to_none=True)
     student.zero_grad()
     teacher.zero_grad()
     augmenter.zero_grad()
