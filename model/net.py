@@ -59,6 +59,7 @@ class Augmenter(nn.Module):
         output_nc,
         nc=32,
         n_blocks=3,
+        use_cgtx=False,
         norm_layer=nn.BatchNorm2d,
         use_dropout=False,
         padding_type="reflect",
@@ -104,6 +105,9 @@ class Augmenter(nn.Module):
             nn.Sigmoid(),
         )
 
+        self.use_gctx = use_cgtx
+        print(f"build augmenter with gctx: {self.use_gctx}")
+
 
         
 
@@ -117,14 +121,16 @@ class Augmenter(nn.Module):
         """
         input = x
         x = self.backbone(x)
-        # c = F.adaptive_avg_pool2d(x, (1, 1))
-        # c = c.expand_as(x)
-        # x = torch.cat([x, c], 1)
-        # x = self.gctx_fusion(x)
+        if (self.use_gctx):
+            c = F.adaptive_avg_pool2d(x, (1, 1))
+            c = c.expand_as(x)
+            x = torch.cat([x, c], 1)
+            x = self.gctx_fusion(x)
 
         p = self.regress(x)
-        # x_p = input + p
-        # return x_p
+        if (self.use_gctx):
+            x_p = input + p
+            return x_p
         return p
     
     def freeze(self):
@@ -181,7 +187,7 @@ def build_augmenter(cfg):
             )
     else:
         norm_layer = nn.BatchNorm2d
-    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer)
+    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer, use_cgtx=cfg.MODEL.AUGMENTER.GTX)
     # init_network_weights(net, init_type="normal", gain=0.02)
     return net
 class Metrics_Monitor():

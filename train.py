@@ -259,7 +259,11 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
             distances = distances[np.triu_indices(distances.shape[0], k = 1)]
             margin = np.mean(distances)
     
-    margin = torch.tensor(margin).to(cfg.DEVICE)
+    if (cfg.MODEL.AUGMENTER.COMPUTE_MARGIN):
+        margin = torch.tensor(margin).to(cfg.DEVICE)
+    else:
+        # using the default margin specified in the paper.
+        margin = torch.tensor(0.1).to(cfg.DEVICE)
 
     augmented_data = augmenter(batch[0])
     s_output = student(augmented_data)

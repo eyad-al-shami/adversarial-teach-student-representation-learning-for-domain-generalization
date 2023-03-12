@@ -59,6 +59,10 @@ def merge_args_cfg(cfg, args):
           cfg.USE_CUDA = False
           cfg.DEVICE = "cpu"
 
+    if cfg.MODEL.AUGMENTER.COMPUTE_MARGIN:
+        # assert that the length of the specified domains is more than 1
+        assert len(cfg.DATASET.SOURCE_DOMAINS) > 1, "The length of the source domains must be more than 1 if the margin is computed"
+
     if args.dry_run:
         cfg.DRY_RUN = True
 
