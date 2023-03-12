@@ -12,7 +12,7 @@ python train.py --use_cuda --experiment_cfg "Experiments/resnet_18.yaml" --logge
 Note that for now, the --logger wandb option is mandatory, as we are currently working on facilitating other types of loggers.
 
 Acknowledgments
-This implementation is based on the paper "Adversarial Teach Student Representation Learning for Domain Generalization", by X. Peng, Q. Yao, and D. Cosker. We would like to thank the authors for their contribution to the field.
+This implementation is based on the paper "Adversarial Teach Student Representation Learning for Domain Generalization", by Fu-En Yang, Yuan-Chia Cheng, Zu-Yun Shiau, Yu-Chiang Frank Wang.
 
 License
 This project is licensed under the MIT License - see the LICENSE file for details.
