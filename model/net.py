@@ -150,7 +150,9 @@ class BackBone(nn.Module):
             pretrained=cfg.MODEL[component.upper()].PRETRAINED
             )
         # use resnet as backbone without the last layer
-        self.net = nn.Sequential(*list(resnet.children())[:-1])
+        del resnet.fc
+        # self.net = nn.Sequential(*list(resnet.children())[:-1])
+        self.net = resnet
 
     def forward(self, x):
         b, c, _,__ = x.shape
