@@ -141,6 +141,12 @@ class Augmenter(nn.Module):
         for p in self.parameters():
             p.requires_grad = True
 
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+        
+    def forward(self, x):
+        return x
 class BackBone(nn.Module):
     def __init__(self, cfg, component='teacher'):
         super(BackBone, self).__init__()
@@ -150,7 +156,7 @@ class BackBone(nn.Module):
             pretrained=cfg.MODEL[component.upper()].PRETRAINED
             )
         # use resnet as backbone without the last layer
-        del resnet.fc
+        resnet.fc = Identity()
         # self.net = nn.Sequential(*list(resnet.children())[:-1])
         self.net = resnet
 
