@@ -47,6 +47,9 @@ def training_validation_loop(cfg, logger):
     t_acc_before_warmup = test_teacher(cfg, teacher, classifier)
     # 1. Warmup
     teacher, classifier = teacher_warmup(cfg, teacher, classifier, metrics_monitors["teacher_warmup_mm"], logger)
+    # copy the weights of the teacher to the student
+    utils.copy_model_weights(teacher, student)
+
     t_acc_after_warmup = test_teacher(cfg, teacher, classifier)
     # print the accuracy of the teacher before and after the warmup using print and + and - signs to make it more readable
     print("+"*50)

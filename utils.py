@@ -176,6 +176,10 @@ class EMAWeight:
         self.count -= 1
         return returned_value
 
+def copy_model_weights(from_model, to_model):
+    for param1, param2 in zip(from_model.parameters(), to_model.parameters()):
+        param2.data.copy_(param1.data)
+
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
