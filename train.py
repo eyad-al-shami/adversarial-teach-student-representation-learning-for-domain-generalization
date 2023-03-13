@@ -110,13 +110,13 @@ def update_teacher(teacher, student, keep_rate):
     # return teacher
     student_model_dict = student.state_dict()
     new_teacher_dict = teacher.state_dict().copy()
-    layers = ['conv1', 'bn1', 'layer1', 'layer2', 'layer3']
+    # layers = ['conv1', 'bn1', 'layer1', 'layer2', 'layer3']
     for key, value in teacher.state_dict().items():
-        if any([layer in key for layer in layers]):
-            new_teacher_dict[key] = (
-                (student_model_dict[key] *
-                (1 - keep_rate)) + (value * keep_rate)
-            )
+        # if any([layer in key for layer in layers]):
+        new_teacher_dict[key] = (
+            (student_model_dict[key] *
+            (1 - keep_rate)) + (value * keep_rate)
+        )
 
     teacher.load_state_dict(new_teacher_dict)
     return teacher

@@ -70,7 +70,7 @@ class Augmenter(nn.Module):
 
         p = 0
         backbone += [
-            nn.ReflectionPad2d(1),
+            # nn.ReflectionPad2d(1),
             nn.Conv2d(
                 input_nc, nc, kernel_size=1, stride=1, padding=p, bias=False
             ),
