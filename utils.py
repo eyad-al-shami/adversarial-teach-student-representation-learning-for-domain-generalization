@@ -5,7 +5,25 @@ import shutil
 import random
 import numpy as np
 import wandb
+from model import net
+import matplotlib.pyplot as plt
+
+plt.rcParams["savefig.bbox"] = 'tight'
 from torch.utils.tensorboard import SummaryWriter
+
+def create_componenets(cfg):
+    """
+        create the componenets of the learning framework
+        1. The augmenter model.
+        2. The Teacher model.
+        3. The student model.
+        4. The classification layer.
+    """
+    augmenter = net.build_augmenter(cfg=cfg)
+    teacher = net.BackBone(cfg=cfg, component='teacher')
+    student = net.BackBone(cfg=cfg, component='student')
+    classifier = net.ClassifierLayer(cfg=cfg)
+    return augmenter, teacher, student, classifier
 
 def set_random_seed(seed):
     random.seed(seed)
@@ -181,15 +199,6 @@ def copy_model_weights(from_model, to_model):
     for param1, param2 in zip(from_model.parameters(), to_model.parameters()):
         param2.data.copy_(param1.data)
 
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-import torchvision.transforms.functional as F
-from torchvision.utils import make_grid
-from torchvision.io import read_image
-from pathlib import Path
-
-plt.rcParams["savefig.bbox"] = 'tight'
 
 def show_batch(batch, dataset):
     fig, ax = plt.subplots(1, batch[0].shape[0], figsize=(20, 20))

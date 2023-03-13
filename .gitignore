@@ -4,3 +4,5 @@ TODELETE.py
 pacs/
 wandb
 __pycache__/
+testing_augmenter.py
+saved_models/

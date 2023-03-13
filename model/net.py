@@ -85,7 +85,7 @@ class Augmenter(nn.Module):
                     padding_type=padding_type,
                     norm_layer=norm_layer,
                     use_dropout=use_dropout,
-                    use_bias=False,
+                    use_bias=True,
                 )
             ]
         self.backbone = nn.Sequential(*backbone)
@@ -102,7 +102,7 @@ class Augmenter(nn.Module):
             nn.Conv2d(
                 nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
             ),
-            nn.Tanh(),
+            nn.Sigmoid(),
         )
 
         self.use_gctx = use_cgtx
