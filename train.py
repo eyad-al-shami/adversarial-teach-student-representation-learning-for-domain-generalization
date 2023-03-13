@@ -44,14 +44,14 @@ def training_validation_loop(cfg, logger):
         for mm in metrics_monitors.values():
             for m in mm.metrics.values():
                 m.to(cfg.DEVICE)
-    t_acc_before_warmup = test_teacher(cfg, teacher, classifier)
+    t_acc_before_warmup = test_model(cfg, teacher, classifier)
     # 1. Warmup
     teacher, classifier = teacher_warmup(cfg, teacher, classifier, metrics_monitors["teacher_warmup_mm"], logger)
     # copy the weights of the teacher to the student
     utils.copy_model_weights(teacher, student)
 
-    t_acc_after_warmup = test_teacher(cfg, teacher, classifier)
-    # print the accuracy of the teacher before and after the warmup using print and + and - signs to make it more readable
+    t_acc_after_warmup = test_model(cfg, teacher, classifier)
+
     print("+"*50)
     print(f"+      Teacher Accuracy Before Warmup: {t_acc_before_warmup}       +")
     print(f"+      Teacher Accuracy After Warmup: {t_acc_after_warmup}         +")
@@ -59,14 +59,11 @@ def training_validation_loop(cfg, logger):
 
     s_optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR, momentum = 0.9)
     a_optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR, momentum = 0.9)
-    # 2 and 3 Representation Learning and Distillation
+
     for epoch in range(cfg.TRAIN.EPOCHS):
-        # update the teacher distillation rate
-        # reset the metrics
         for m in metrics_monitors.values():
             m.reset()
-        # reduce the learning rate after 30 epochs
-        if epoch == 20:
+        if epoch == cfg.MODEL.STUDENT.LR_DECAY_EPOCH:
             for optimizer_ in [s_optimizer.param_groups, a_optimizer.param_groups]:
                 for param_group in optimizer_:
                     param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
@@ -76,8 +73,6 @@ def training_validation_loop(cfg, logger):
                 tepoch.set_description(f"Epoch {epoch}")
                 if (cfg.USE_CUDA):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
-                # 2. Representation Learning
-                # 2.1. Update the student
                 student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, s_optimizer, batch, epoch)
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
@@ -93,12 +88,13 @@ def training_validation_loop(cfg, logger):
                 logger.log({"rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
         for m in metrics_monitors.values():
             m.reset()
-        # reduce the learning rate after 30 epochs
         if cfg.DRY_RUN:
             break
-        teacher_accuracy = test_teacher(cfg, teacher, classifier)
+        student_accuracy = test_model(cfg, student, classifier)
+        teacher_accuracy = test_model(cfg, teacher, classifier)
         if cfg.LOGGING.ENABLED:
             logger.log({"teacher_acc": teacher_accuracy, "epoch": epoch})
+            logger.log({"student_acc": student_accuracy, "epoch": epoch})
     return teacher, student, augmenter, classifier
 
 @torch.no_grad()
@@ -291,9 +287,9 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     classifier.zero_grad()
     return augmenter, margin_loss.item(), cross_entropy.item()
 
-def test_teacher(cfg, teacher, classifier):
+def test_model(cfg, model, classifier):
     _, target_data_loader = get_dataset(cfg, domains=cfg.DATASET.TARGET_DOMAINS)
-    teacher.eval()
+    model.eval()
     classifier.eval()
     correct = 0
     total = 0
@@ -301,7 +297,7 @@ def test_teacher(cfg, teacher, classifier):
         for batch in target_data_loader:
             if (cfg.USE_CUDA):
                 batch = [tensor.to(cfg.DEVICE) for tensor in batch]
-            output = teacher(batch[0])
+            output = model(batch[0])
             output = classifier(output)
             _, predicted = torch.max(output.data, 1)
             total += batch[2].size(0)
@@ -316,7 +312,7 @@ if __name__ == '__main__':
     print(cfg)
     logger = utils.set_logger(cfg)
     teacher, student, augmenter, classifier = training_validation_loop(cfg, logger)
-    teacher_acc = test_teacher(cfg, teacher, classifier)
+    teacher_acc = test_model(cfg, teacher, classifier)
 
     print("The teacher accuracy on the target domain is: ", teacher_acc)
 
