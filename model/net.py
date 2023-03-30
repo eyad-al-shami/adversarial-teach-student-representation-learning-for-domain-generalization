@@ -88,25 +88,33 @@ class Augmenter(nn.Module):
                     use_bias=True,
                 )
             ]
+
+        backbone += [
+                nn.Conv2d(
+                    input_nc, nc, kernel_size=1, stride=1, padding=p, bias=False
+                ),
+                nn.Tanh()
+            ]
+
         self.backbone = nn.Sequential(*backbone)
         
-        self.gctx_fusion = nn.Sequential(
-            nn.Conv2d(
-                2 * nc, nc, kernel_size=1, stride=1, padding=0, bias=False
-            ),
-            norm_layer(nc),
-            nn.ReLU(True),
-        )
+        # self.gctx_fusion = nn.Sequential(
+        #     nn.Conv2d(
+        #         2 * nc, nc, kernel_size=1, stride=1, padding=0, bias=False
+        #     ),
+        #     norm_layer(nc),
+        #     nn.ReLU(True),
+        # )
 
-        self.regress = nn.Sequential(
-            nn.Conv2d(
-                nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
-            ),
-            nn.Sigmoid(),
-        )
+        # self.regress = nn.Sequential(
+        #     nn.Conv2d(
+        #         nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
+        #     ),
+        #     nn.Sigmoid(),
+        # )
 
-        self.use_gctx = use_cgtx
-        print(f"build augmenter with gctx: {self.use_gctx}")
+        # self.use_gctx = use_cgtx
+        # print(f"build augmenter with gctx: {self.use_gctx}")
 
 
         
@@ -121,17 +129,18 @@ class Augmenter(nn.Module):
         """
         input = x
         x = self.backbone(x)
-        if (self.use_gctx):
-            c = F.adaptive_avg_pool2d(x, (1, 1))
-            c = c.expand_as(x)
-            x = torch.cat([x, c], 1)
-            x = self.gctx_fusion(x)
+        return x
+        # if (self.use_gctx):
+        #     c = F.adaptive_avg_pool2d(x, (1, 1))
+        #     c = c.expand_as(x)
+        #     x = torch.cat([x, c], 1)
+        #     x = self.gctx_fusion(x)
 
-        p = self.regress(x)
-        if (self.use_gctx):
-            x_p = input + p
-            return x_p
-        return p
+        # p = self.regress(x)
+        # if (self.use_gctx):
+        #     x_p = input + p
+        #     return x_p
+        # return p
     
     def freeze(self):
         for p in self.parameters():

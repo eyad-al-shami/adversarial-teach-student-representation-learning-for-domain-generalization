@@ -10,7 +10,7 @@ import utils
 import model.net as net
 from data import get_dataset
 from sklearn.metrics.pairwise import euclidean_distances
-import Logger
+from logger import Logger
 
 def create_componenets(cfg):
     """
@@ -29,10 +29,17 @@ def create_componenets(cfg):
 def training_validation_loop(cfg, logger):
     
     phase = 'training'
-    # create the components of the learning framework
     augmenter, teacher, student, classifier = create_componenets(cfg)
-    metrics_monitors = {"teacher_warmup_mm": net.Metrics_Monitor(cfg), "teacher_student_update_mm": net.Metrics_Monitor(cfg), "augmenter_discrepancy_mm": net.Metrics_Monitor(cfg), "augmenter_crossentropy_mm": net.Metrics_Monitor(cfg)}
+
+    metrics_monitors = {
+        "teacher_warmup_mm": net.Metrics_Monitor(cfg), 
+        "teacher_student_update_mm": net.Metrics_Monitor(cfg), 
+        "augmenter_discrepancy_mm": net.Metrics_Monitor(cfg), 
+        "augmenter_crossentropy_mm": net.Metrics_Monitor(cfg)
+        }
+    
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
+
     # move modules to GPU if available
     if (cfg.USE_CUDA):
         augmenter = augmenter.to(cfg.DEVICE)
@@ -43,11 +50,13 @@ def training_validation_loop(cfg, logger):
         for mm in metrics_monitors.values():
             for m in mm.metrics.values():
                 m.to(cfg.DEVICE)
+
     t_acc_before_warmup = test_model(cfg, teacher, classifier)
     # 1. Warmup
     teacher, classifier = teacher_warmup(cfg, teacher, classifier, metrics_monitors["teacher_warmup_mm"], logger)
+    
     # copy the weights of the teacher to the student
-    utils.copy_model_weights(teacher, student)
+    # utils.copy_model_weights(teacher, student)
 
     t_acc_after_warmup = test_model(cfg, teacher, classifier)
 
@@ -56,14 +65,14 @@ def training_validation_loop(cfg, logger):
     print(f"+      Teacher Accuracy After Warmup: {t_acc_after_warmup}         +")
     print("+"*50)
 
-    s_optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
-    a_optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
+    student_optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
+    augmenter_optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
 
     for epoch in range(cfg.TRAIN.EPOCHS):
         for m in metrics_monitors.values():
             m.reset()
         if epoch == cfg.MODEL.STUDENT.LR_DECAY_EPOCH:
-            for optimizer_ in [s_optimizer.param_groups, a_optimizer.param_groups]:
+            for optimizer_ in [student_optimizer.param_groups, augmenter_optimizer.param_groups]:
                 for param_group in optimizer_:
                     param_group['lr'] = cfg.MODEL.STUDENT.LR * cfg.MODEL.STUDENT.LR_DECAY
     
@@ -72,23 +81,31 @@ def training_validation_loop(cfg, logger):
                 tepoch.set_description(f"Epoch {epoch}")
                 if (cfg.USE_CUDA):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
-                student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, s_optimizer, batch, epoch)
+                student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, student_optimizer, batch, epoch)
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                 # 2.2. Update the teacher using Exponential Moving Average (Distillation)
                 teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 # 3. update the augmenter
-                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, a_optimizer, batch)
+                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
                 with torch.no_grad():
                     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
 
-            logger.log({"rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute(), "phase": phase}, step=epoch)
+            logger.log(
+                {
+                "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
+                "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
+                "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
+                }, 
+                step=epoch
+            )
+            if cfg.DRY_RUN:
+                break
         for m in metrics_monitors.values():
             m.reset()
-        if cfg.DRY_RUN:
-            break
+        
         student_accuracy = test_model(cfg, student, classifier)
         teacher_accuracy = test_model(cfg, teacher, classifier)
         logger.log({"teacher_acc": teacher_accuracy}, step=epoch)
