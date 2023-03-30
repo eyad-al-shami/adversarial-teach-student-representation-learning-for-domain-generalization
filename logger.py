@@ -23,19 +23,19 @@ class Logger():
 
         if not config.LOGGING.LOGGER:
             print("No logger is used, using tensorboard as a local logger")
-            self.logger = SummaryWriter(log_dir=osp.join(config.LOGGING.LOG_DIR, config.LOGGING.EXPERIMENT_NAME))
+            self.writer = SummaryWriter(log_dir=osp.join(config.LOGGING.LOG_DIR, config.LOGGING.EXPERIMENT_NAME))
         else:
             if config.LOGGING.LOGGER == "wandb":
-                self.logger = wandb
-                self.logger.init(project=config.LOGGING.PROJECT, name=config.LOGGING.EXPERIMENT_NAME, config=config)
+                self.writer = wandb
+                self.writer.init(project=config.LOGGING.PROJECT, name=config.LOGGING.EXPERIMENT_NAME, config=config)
                 self.logger_name = "wandb"
             elif config.LOGGING.LOGGER == "tensorboard":
-                self.logger = SummaryWriter(log_dir=osp.join(config.LOGGING.LOG_DIR, config.LOGGING.EXPERIMENT_NAME))
+                self.writer = SummaryWriter(log_dir=osp.join(config.LOGGING.LOG_DIR, config.LOGGING.EXPERIMENT_NAME))
 
     def log(self, metrics, step):
         if self.logger_used == "wandb":
-            self.logger.log(metrics, step=step)
+            self.writer.log(metrics, step=step)
         elif self.logger_used == "tensorboard":
             for key, value in metrics.items():
-                self.logger.add_scalar(key, value, step)
+                self.writer.add_scalar(key, value, step)
 
