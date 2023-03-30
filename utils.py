@@ -44,18 +44,19 @@ def merge_parameters(models):
         params += list(model.parameters())
     return params
 
-def set_logger(cfg):
-    if (cfg.LOGGING.ENABLED == False):
-        return None
-    if cfg.LOGGING.LOGGER == "wandb":
-        run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.EXPERIMENT_NAME, config=cfg)
-        logger = wandb
-    elif cfg.LOGGING.LOGGER == "tensorboard":
-        logger = SummaryWriter()
-    else:
-        # TODO: add logging to file
-        logger = None
-    return logger
+# TODO: remove this function
+# def set_logger(cfg):
+#     if (cfg.LOGGING.ENABLED == False):
+#         return None
+#     if cfg.LOGGING.LOGGER == "wandb":
+#         run = wandb.init(project=cfg.LOGGING.WANDB.PROJECT, name=cfg.LOGGING.EXPERIMENT_NAME, config=cfg)
+#         logger = wandb
+#     elif cfg.LOGGING.LOGGER == "tensorboard":
+#         logger = SummaryWriter()
+#     else:
+#         # TODO: add logging to file
+#         logger = None
+#     return logger
 class RunningAverage():
     """A simple class that maintains the running average of a quantity
     
@@ -198,7 +199,6 @@ class EMAWeight:
 def copy_model_weights(from_model, to_model):
     for param1, param2 in zip(from_model.parameters(), to_model.parameters()):
         param2.data.copy_(param1.data)
-
 
 def show_batch(batch, dataset):
     fig, ax = plt.subplots(1, batch[0].shape[0], figsize=(20, 20))

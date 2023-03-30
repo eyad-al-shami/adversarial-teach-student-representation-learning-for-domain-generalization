@@ -12,10 +12,9 @@ def get_cfg_defaults():
 def merge_args_cfg(cfg, args):
     # TODO logging must always be enabled, use tensorboard by default
     if args.logger:
-        cfg.LOGGING.ENABLED = True
         cfg.LOGGING.LOGGER = args.logger
         # If the experiment name is not provided, then use the date and time
-        if (args.experiment_name and args.experiment_name.lower() == "lr"):
+        if (args.experiment_name and args.experiment_name.lower() == "hp"):
             cfg.LOGGING.EXPERIMENT_NAME = f"A: {cfg.MODEL.AUGMENTER.LR} - TAU: {cfg.MODEL.TEACHER.TAU} - TW: {cfg.MODEL.TEACHER.WARMUP_LR} - S: {cfg.MODEL.STUDENT.LR} - {utils.get_readable_date_time()}"
         else:
             cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
@@ -58,6 +57,9 @@ def merge_args_cfg(cfg, args):
           logging.warning("CUDA is not available, using CPU instead")
           cfg.USE_CUDA = False
           cfg.DEVICE = "cpu"
+    
+    if (args.config_debug):
+        cfg.CONFIG_DEBUG = True
 
     if cfg.MODEL.AUGMENTER.COMPUTE_MARGIN:
         # assert that the length of the specified domains is more than 1

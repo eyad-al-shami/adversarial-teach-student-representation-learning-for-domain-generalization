@@ -15,6 +15,7 @@ _C.SEED = 1337
 # E.g. trainer, dataset, and backbone
 _C.VERBOSE = True
 _C.DRY_RUN = False
+_C.CONFIG_DEBUG = False
 _C.OUTPUT_DIR = "saved_models"
 
 ###########################
@@ -34,18 +35,18 @@ _C.TRAIN.EPOCHS = 60
 _C.TRAIN.BATCH_SIZE = 64
 _C.TRAIN.PRINT_FREQ = 100
 
+
+###########################
+# Logging
+###########################
+
 _C.LOGGING = CN()
 
-_C.LOGGING.ENABLED = False
 _C.LOGGING.EXPERIMENT_NAME = ""
+_C.LOGGING.LOG_DIR = "logs"
 _C.LOGGING.LOGGER = "wandb"
+_C.LOGGING.PROJECT = "Adversarial-TS-DG"
 
-_C.LOGGING.WANDB = CN()
-_C.LOGGING.WANDB.ENABLE = False
-_C.LOGGING.WANDB.PROJECT = "Adversarial-TS-DG"
-
-_C.LOGGING.TENSORBOARD = CN()
-_C.LOGGING.TENSORBOARD.ENABLE = False
 
 ###########################
 # Models

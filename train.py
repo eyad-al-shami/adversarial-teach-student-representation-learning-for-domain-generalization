@@ -1,17 +1,16 @@
 """Train the model"""
 from commandline.cmdParser import parser
-import logging
 import os
 from configs import setup_cfg
 import torch
 import torch.optim as optim
 from tqdm import tqdm
 import numpy as np
-from collections import OrderedDict
 import utils
 import model.net as net
 from data import get_dataset
 from sklearn.metrics.pairwise import euclidean_distances
+import Logger
 
 def create_componenets(cfg):
     """
@@ -84,17 +83,16 @@ def training_validation_loop(cfg, logger):
                     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
-            if cfg.LOGGING.ENABLED:
-                logger.log({"rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute() , "epoch": epoch, "phase": phase})
+
+            logger.log({"rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute(), "phase": phase}, step=epoch)
         for m in metrics_monitors.values():
             m.reset()
         if cfg.DRY_RUN:
             break
         student_accuracy = test_model(cfg, student, classifier)
         teacher_accuracy = test_model(cfg, teacher, classifier)
-        if cfg.LOGGING.ENABLED:
-            logger.log({"teacher_acc": teacher_accuracy, "epoch": epoch})
-            logger.log({"student_acc": student_accuracy, "epoch": epoch})
+        logger.log({"teacher_acc": teacher_accuracy}, step=epoch)
+        logger.log({"student_acc": student_accuracy}, step=epoch)
     return teacher, student, augmenter, classifier
 
 @torch.no_grad()
@@ -163,8 +161,8 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
                     acc = m_monitor.metrics["acc"](output, target)
                     m_monitor.metrics["loss"](loss)
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
-            if cfg.LOGGING.ENABLED:
-                logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "epoch": epoch, "phase": phase})
+
+            logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "phase": phase}, step=epoch)
         if cfg.DRY_RUN:
             break
     optimizer.zero_grad()
@@ -307,19 +305,20 @@ def test_model(cfg, model, classifier):
 if __name__ == '__main__':
     args = parser.parse_args()
     cfg = setup_cfg(args)
-
     utils.set_random_seed(cfg.SEED)
     print(cfg)
-    logger = utils.set_logger(cfg)
-    teacher, student, augmenter, classifier = training_validation_loop(cfg, logger)
-    teacher_acc = test_model(cfg, teacher, classifier)
 
-    print("The teacher accuracy on the target domain is: ", teacher_acc)
+    if (not cfg.CONFIG_DEBUG):
+        logger = Logger(cfg)
+        teacher, student, augmenter, classifier = training_validation_loop(cfg, logger)
+        teacher_acc = test_model(cfg, teacher, classifier)
 
-    utils.save_checkpoint(teacher.state_dict(), False, cfg.OUTPUT_DIR, name="teacher.pth")
-    utils.save_checkpoint(student.state_dict(), False, cfg.OUTPUT_DIR, name="student.pth")
-    utils.save_checkpoint(augmenter.state_dict(), False, cfg.OUTPUT_DIR, name="augmenter.pth")
-    utils.save_checkpoint(classifier.state_dict(), False, cfg.OUTPUT_DIR, name="classifier.pth")
+        print("The teacher accuracy on the target domain is: ", teacher_acc)
+
+        utils.save_checkpoint(teacher.state_dict(), False, cfg.OUTPUT_DIR, name="teacher.pth")
+        utils.save_checkpoint(student.state_dict(), False, cfg.OUTPUT_DIR, name="student.pth")
+        utils.save_checkpoint(augmenter.state_dict(), False, cfg.OUTPUT_DIR, name="augmenter.pth")
+        utils.save_checkpoint(classifier.state_dict(), False, cfg.OUTPUT_DIR, name="classifier.pth")
 
 
 
