@@ -19,6 +19,9 @@ def merge_args_cfg(cfg, args):
             cfg.LOGGING.EXPERIMENT_NAME = f"A: {cfg.MODEL.AUGMENTER.LR} - TAU: {cfg.MODEL.TEACHER.TAU} - TW: {cfg.MODEL.TEACHER.WARMUP_LR} - S: {cfg.MODEL.STUDENT.LR} - {utils.get_readable_date_time()}"
         else:
             cfg.LOGGING.EXPERIMENT_NAME = args.experiment_name if args.experiment_name else utils.get_readable_date_time()
+    else:
+        cfg.LOGGING.LOGGER = "tensorboard"
+        cfg.LOGGING.EXPERIMENT_NAME = f"A: {cfg.MODEL.AUGMENTER.LR} - TAU: {cfg.MODEL.TEACHER.TAU} - TW: {cfg.MODEL.TEACHER.WARMUP_LR} - S: {cfg.MODEL.STUDENT.LR} - {utils.get_readable_date_time()}"
 
     if args.data_dir:
         cfg.DATASET.ROOT = args.data_dir
