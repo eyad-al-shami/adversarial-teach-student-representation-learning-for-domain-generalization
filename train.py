@@ -10,7 +10,7 @@ import utils
 import model.net as net
 from data import get_dataset
 from sklearn.metrics.pairwise import euclidean_distances
-from logger import Logger
+from MetricLogger import MetricLogger
 
 def create_componenets(cfg):
     """
@@ -93,7 +93,7 @@ def training_validation_loop(cfg, logger):
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
 
-            logger.log(
+            logger.write(
                 {
                 "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
                 "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
@@ -108,8 +108,8 @@ def training_validation_loop(cfg, logger):
         
         student_accuracy = test_model(cfg, student, classifier)
         teacher_accuracy = test_model(cfg, teacher, classifier)
-        logger.log({"teacher_acc": teacher_accuracy}, step=epoch)
-        logger.log({"student_acc": student_accuracy}, step=epoch)
+        logger.write({"teacher_acc": teacher_accuracy}, step=epoch)
+        logger.write({"student_acc": student_accuracy}, step=epoch)
     return teacher, student, augmenter, classifier
 
 @torch.no_grad()
@@ -179,7 +179,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
                     m_monitor.metrics["loss"](loss)
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
 
-            logger.log({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "phase": phase}, step=epoch)
+            logger.write({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "phase": phase}, step=epoch)
         if cfg.DRY_RUN:
             break
     optimizer.zero_grad()
@@ -326,7 +326,7 @@ if __name__ == '__main__':
     print(cfg)
 
     if (not cfg.CONFIG_DEBUG):
-        logger = Logger(cfg)
+        logger = MetricLogger(cfg)
         teacher, student, augmenter, classifier = training_validation_loop(cfg, logger)
         teacher_acc = test_model(cfg, teacher, classifier)
 

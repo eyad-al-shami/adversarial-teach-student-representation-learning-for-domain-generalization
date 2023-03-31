@@ -1,14 +1,10 @@
 
 import wandb
 import os
-import sys
-import time
 import os.path as osp
 from torch.utils.tensorboard import SummaryWriter
 
-__all__ = ["Logger"]
-
-class Logger():
+class MetricLogger():
     def __init__(self, config):
         self.config = config
         self.logger_used = "tensorboard"
@@ -32,7 +28,7 @@ class Logger():
             elif config.LOGGING.LOGGER == "tensorboard":
                 self.writer = SummaryWriter(log_dir=osp.join(config.LOGGING.LOG_DIR, config.LOGGING.EXPERIMENT_NAME))
 
-    def log(self, metrics, step):
+    def write(self, metrics, step):
         if self.logger_used == "wandb":
             self.writer.log(metrics, step=step)
         elif self.logger_used == "tensorboard":
