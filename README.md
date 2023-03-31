@@ -6,7 +6,7 @@ To start training, you can choose one of the predefined experiments or create yo
 To run the code, use the following command:
 
 ```python:
-python train.py --use_cuda --experiment_cfg "Experiments/resnet_18.yaml" --logger wandb --experiment_name "lr"
+python "/content/adversarial-teach-student-representation-learning-for-domain-generalization/train.py" --use_cuda --experiment_cfg "/content/adversarial-teach-student-representation-learning-for-domain-generalization/Experiments/resnet_18.yaml"
 ```
 
 Note that for now, the --logger wandb option is mandatory, as we are currently working on facilitating other types of loggers.
