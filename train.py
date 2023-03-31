@@ -52,10 +52,8 @@ def training_validation_loop(cfg, logger):
                 m.to(cfg.DEVICE)
 
     t_acc_before_warmup = test_model(cfg, teacher, classifier)
-    # 1. Warmup
+
     teacher, classifier = teacher_warmup(cfg, teacher, classifier, metrics_monitors["teacher_warmup_mm"], logger)
-    
-    # copy the weights of the teacher to the student
     # utils.copy_model_weights(teacher, student)
 
     t_acc_after_warmup = test_model(cfg, teacher, classifier)
@@ -81,14 +79,13 @@ def training_validation_loop(cfg, logger):
                 tepoch.set_description(f"Epoch {epoch}")
                 if (cfg.USE_CUDA):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
+
                 student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, student_optimizer, batch, epoch)
+                teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
+                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
+
                 with torch.no_grad():
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
-                # 2.2. Update the teacher using Exponential Moving Average (Distillation)
-                teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
-                # 3. update the augmenter
-                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
-                with torch.no_grad():
                     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
@@ -180,8 +177,8 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
 
             logger.write({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute()}, step=epoch)
-        if cfg.DRY_RUN:
-            break
+            if cfg.DRY_RUN:
+                break
     optimizer.zero_grad()
     teacher.zero_grad()
     classifier.zero_grad()
@@ -202,22 +199,21 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
             loss: the loss of the student model
     '''
 
-    # freeze the augmenter and the teacher (we freeze the teacher because we will update it using EMA)
     augmenter.freeze()
-    teacher.freeze() # No need to accumulate gradients to make training faster
-    # put teacher and student in train mode
+    augmenter.eval()
+
+    teacher.freeze()
     teacher.eval()
+
     student.train()
+
     # zero optimizer
     optimizer.zero_grad()
 
-    # optimizer = optim.SGD(student.parameters(), lr=cfg.MODEL.STUDENT.LR)
-    
-
     # first pass the input through the augmenter and the teacher
-    augmented_data = augmenter(batch[0])
+    augmentations = augmenter(batch[0])
     t_output = teacher(batch[0])
-    s_output = student(augmented_data)
+    s_output = student(augmentations)
 
     t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
     s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
@@ -256,8 +252,6 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     augmenter.unfreeze()
     teacher.eval()
     student.eval()
-
-    optimizer = optim.SGD(augmenter.parameters(), lr=cfg.MODEL.AUGMENTER.LR)
 
     # compute the centroids of domains in the batch
     with torch.no_grad():
