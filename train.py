@@ -107,9 +107,9 @@ def training_validation_loop(cfg, logger):
             )
             if cfg.DRY_RUN:
                 break
-    for m in metrics_monitors.values():
-        m.reset()
-        
+        # for m in metrics_monitors.values():
+        #     m.reset()
+            
         student_accuracy = test_model(cfg, student, classifier)
         teacher_accuracy = test_model(cfg, teacher, classifier)
         logger.write({"teacher_acc": teacher_accuracy}, step=epoch)
