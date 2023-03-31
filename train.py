@@ -129,7 +129,7 @@ def update_teacher(teacher, student, keep_rate):
     new_teacher_dict = teacher.state_dict().copy()
 
     if (cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS):
-        for name, module in module.net.named_children():
+        for name, module in teacher.net.named_children():
             if name in cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS_NAMES:
                 for key, value in module.state_dict().items():
                     new_teacher_dict[key] = (
