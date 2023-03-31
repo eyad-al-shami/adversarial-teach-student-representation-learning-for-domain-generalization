@@ -12,14 +12,12 @@ DATASET:
   STD: [0.2895, 0.3015, 0.3315]
 LOGGING:
   EXPERIMENT_NAME: "testing warmup"
-  WANDB:
-    ENABLE: False
-    PROJECT: "Adversarial-TS-DG"
+  LOGGER: "wandb"
 TRAIN:
   BATCH_SIZE: 64
 MODEL:
   AUGMENTER:
-    NORM_LAYER: "IN"
+    NORM_LAYER: "BN"
     LR: 0.0005
     COMPUTE_MARGIN: True
   TEACHER:

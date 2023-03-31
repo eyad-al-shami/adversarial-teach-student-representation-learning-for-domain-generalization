@@ -198,13 +198,13 @@ class ClassifierLayer(nn.Module):
             p.requires_grad = True
 
 def build_augmenter(cfg):
-    if (cfg.MODEL.AUGMENTER.NORM_LAYER == "IN"):
-        norm_layer = functools.partial(
-                nn.InstanceNorm2d, affine=False, track_running_stats=False
-            )
-    else:
-        norm_layer = nn.BatchNorm2d
-    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer, use_cgtx=cfg.MODEL.AUGMENTER.GTX)
+    # if (cfg.MODEL.AUGMENTER.NORM_LAYER == "IN"):
+    #     norm_layer = functools.partial(
+    #             nn.InstanceNorm2d, affine=False, track_running_stats=False
+    #         )
+    # else:
+    #     norm_layer = nn.BatchNorm2d
+    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=nn.BatchNorm2d, use_cgtx=cfg.MODEL.AUGMENTER.GTX)
     # init_network_weights(net, init_type="normal", gain=0.02)
     return net
 class Metrics_Monitor():

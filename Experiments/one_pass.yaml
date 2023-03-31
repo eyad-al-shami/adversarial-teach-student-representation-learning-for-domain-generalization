@@ -10,9 +10,7 @@ DATASET:
   STD: [0.2895, 0.3015, 0.3315]
 LOGGING:
   EXPERIMENT_NAME: "testing warmup"
-  WANDB:
-    ENABLE: False
-    PROJECT: "Adversarial-TS-DG"
+  LOGGER: "wandb"
 TRAIN:
   BATCH_SIZE: 64
   EPOCHS: 1
