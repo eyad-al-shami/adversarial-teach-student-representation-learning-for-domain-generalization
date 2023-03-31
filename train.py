@@ -129,13 +129,12 @@ def update_teacher(teacher, student, keep_rate):
     new_teacher_dict = teacher.state_dict().copy()
 
     if (cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS):
-        for name, module in teacher.net.named_children():
-            if name in cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS_NAMES:
-                for key, value in module.state_dict().items():
-                    new_teacher_dict[key] = (
-                        (student_model_dict[key] *
-                        (1 - keep_rate)) + (value * keep_rate)
-                    )
+        for key, value in teacher.state_dict().items():
+            if any(layer in key for layer in cfg.MODEL.TEACHER.ONLY_UPDATE_LAYERS):
+                new_teacher_dict[key] = (
+                    (student_model_dict[key] *
+                    (1 - keep_rate)) + (value * keep_rate)
+                )
     else:
         for key, value in teacher.state_dict().items():
             new_teacher_dict[key] = (
