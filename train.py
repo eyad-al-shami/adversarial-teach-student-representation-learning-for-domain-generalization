@@ -84,24 +84,24 @@ def training_validation_loop(cfg, logger):
                 teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
 
-                with torch.no_grad():
-                    metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
-                    metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
-                    metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
-                tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
+                # with torch.no_grad():
+                #     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
+                #     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
+                #     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
+                # tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
 
-            logger.write(
-                {
-                "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
-                "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
-                "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
-                }, 
-                step=epoch
-            )
+            # logger.write(
+            #     {
+            #     "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
+            #     "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
+            #     "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
+            #     }, 
+            #     step=epoch
+            # )
             if cfg.DRY_RUN:
                 break
-        for m in metrics_monitors.values():
-            m.reset()
+    for m in metrics_monitors.values():
+        m.reset()
         
         student_accuracy = test_model(cfg, student, classifier)
         teacher_accuracy = test_model(cfg, teacher, classifier)
