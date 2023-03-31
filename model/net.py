@@ -91,7 +91,7 @@ class Augmenter(nn.Module):
 
         backbone += [
                 nn.Conv2d(
-                    input_nc, nc, kernel_size=1, stride=1, padding=p, bias=False
+                    nc, output_nc, kernel_size=1, stride=1, padding=p, bias=False
                 ),
                 nn.Tanh()
             ]
