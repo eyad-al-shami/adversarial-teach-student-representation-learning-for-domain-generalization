@@ -12,6 +12,8 @@ from data import get_dataset
 from sklearn.metrics.pairwise import euclidean_distances
 from MetricLogger import MetricLogger
 
+# Creating Components
+
 def create_componenets(cfg):
     """
         create the componenets of the learning framework
@@ -25,6 +27,8 @@ def create_componenets(cfg):
     student = net.BackBone(cfg=cfg, component='student')
     classifier = net.ClassifierLayer(cfg=cfg)
     return augmenter, teacher, student, classifier
+
+# Main Training Loop
 
 def training_validation_loop(cfg, logger):
     
@@ -112,6 +116,8 @@ def training_validation_loop(cfg, logger):
         logger.write({"student_acc": student_accuracy}, step=epoch)
     return teacher, student, augmenter, classifier
 
+# Learning Functions
+
 @torch.no_grad()
 def update_teacher(teacher, student, keep_rate):
     # with torch.no_grad():
@@ -121,13 +127,21 @@ def update_teacher(teacher, student, keep_rate):
     # return teacher
     student_model_dict = student.state_dict()
     new_teacher_dict = teacher.state_dict().copy()
-    # layers = ['conv1', 'bn1', 'layer1', 'layer2', 'layer3']
-    for key, value in teacher.state_dict().items():
-        # if any([layer in key for layer in layers]):
-        new_teacher_dict[key] = (
-            (student_model_dict[key] *
-            (1 - keep_rate)) + (value * keep_rate)
-        )
+
+    if (cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS):
+        for name, module in module.net.named_children():
+            if name in cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS_NAMES:
+                for key, value in module.state_dict().items():
+                    new_teacher_dict[key] = (
+                        (student_model_dict[key] *
+                        (1 - keep_rate)) + (value * keep_rate)
+                    )
+    else:
+        for key, value in teacher.state_dict().items():
+            new_teacher_dict[key] = (
+                (student_model_dict[key] *
+                (1 - keep_rate)) + (value * keep_rate)
+            )
 
     teacher.load_state_dict(new_teacher_dict)
     return teacher
@@ -299,6 +313,9 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     augmenter.zero_grad()
     classifier.zero_grad()
     return augmenter, margin_loss.item(), cross_entropy.item()
+
+
+# Testing funtions
 
 def test_model(cfg, model, classifier):
     _, target_data_loader = get_dataset(cfg, domains=cfg.DATASET.TARGET_DOMAINS)

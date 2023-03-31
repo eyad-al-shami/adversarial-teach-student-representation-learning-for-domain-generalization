@@ -3,8 +3,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 import functools
 import torchmetrics
-
-
 class ResnetBlock(nn.Module):
 
     def __init__(self, dim, padding_type, norm_layer, use_dropout, use_bias):
@@ -156,6 +154,7 @@ class Identity(nn.Module):
         
     def forward(self, x):
         return x
+
 class BackBone(nn.Module):
     def __init__(self, cfg, component='teacher'):
         super(BackBone, self).__init__()
@@ -217,5 +216,3 @@ class Metrics_Monitor():
     def reset(self):
         for m in self.metrics.values():
             m.reset()
-
-    
