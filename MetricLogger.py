@@ -33,6 +33,5 @@ class MetricLogger():
             self.writer.log(metrics, step=step)
         elif self.logger_used == "tensorboard":
             for key, value in metrics.items():
-                print(type(key), type(value), key, value)
                 self.writer.add_scalar(key, value, step)
 
