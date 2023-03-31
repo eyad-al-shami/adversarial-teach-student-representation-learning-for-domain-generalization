@@ -24,7 +24,7 @@ class MetricLogger():
             if config.LOGGING.LOGGER == "wandb":
                 self.writer = wandb
                 self.writer.init(project=config.LOGGING.PROJECT, name=config.LOGGING.EXPERIMENT_NAME, config=config)
-                self.logger_name = "wandb"
+                self.logger_used = "wandb"
             elif config.LOGGING.LOGGER == "tensorboard":
                 self.writer = SummaryWriter(log_dir=osp.join(config.LOGGING.LOG_DIR, config.LOGGING.EXPERIMENT_NAME))
 
