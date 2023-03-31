@@ -85,22 +85,22 @@ def training_validation_loop(cfg, logger):
                 augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
 
                 with torch.no_grad():
-                    print(f"RL Loss: {rl_loss}")
-                    print(f"Augmenter Discrepancy Loss: {aug_D_loss}")
-                    print(f"Augmenter CrossEntropy Loss: {aug_Ce_Loss}")
-                #     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
-                #     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
-                #     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
-                # tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
+                    # print(f"RL Loss: {rl_loss}")
+                    # print(f"Augmenter Discrepancy Loss: {aug_D_loss}")
+                    # print(f"Augmenter CrossEntropy Loss: {aug_Ce_Loss}")
+                    metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
+                    metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
+                    metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
+                tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
 
-            # logger.write(
-            #     {
-            #     "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
-            #     "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
-            #     "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
-            #     }, 
-            #     step=epoch
-            # )
+            logger.write(
+                {
+                "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
+                "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
+                "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
+                }, 
+                step=epoch
+            )
             if cfg.DRY_RUN:
                 break
     for m in metrics_monitors.values():
@@ -222,7 +222,8 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
 
     discrepancy = t_output_normalized - s_output_normalized
-    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean()
+    # add a very tiny number to avoid nan
+    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean() + 1e-8
     
     loss = torch.nn.functional.cross_entropy(classifier(s_output), batch[2]) + discrepancy_loss
     loss.backward()
