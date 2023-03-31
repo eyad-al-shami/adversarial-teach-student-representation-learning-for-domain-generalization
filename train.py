@@ -179,7 +179,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
                     m_monitor.metrics["loss"](loss)
                 tepoch.set_postfix(loss=loss.item(), acc=acc.item())
 
-            logger.write({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute(), "phase": phase}, step=epoch)
+            logger.write({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute()}, step=epoch)
         if cfg.DRY_RUN:
             break
     optimizer.zero_grad()
