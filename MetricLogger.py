@@ -31,8 +31,8 @@ class MetricLogger():
     def write(self, metrics, step):
         if self.logger_used == "wandb":
             self.writer.log(metrics, step=step)
-            self.writer.flush()
         elif self.logger_used == "tensorboard":
             for key, value in metrics.items():
+                print("key: {}, value: {}".format(key, value))
                 self.writer.add_scalar(key, value, step)
 

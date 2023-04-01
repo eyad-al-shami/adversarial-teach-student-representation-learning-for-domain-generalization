@@ -97,16 +97,16 @@ def training_validation_loop(cfg, logger):
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
                 tepoch.set_postfix(rl_loss=rl_loss, aug_D_loss=aug_D_loss)
 
-            logger.write(
-                {
-                "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
-                "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
-                "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
-                }, 
-                step=epoch
-            )
-            if cfg.DRY_RUN:
-                break
+        logger.write(
+            {
+            "rl_loss":metrics_monitors["teacher_student_update_mm"].metrics["loss"].compute(), 
+            "aug_Disc_loss": metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"].compute(), 
+            "aug_Ce_loss": metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"].compute()
+            }, 
+            step=epoch
+        )
+        if cfg.DRY_RUN:
+            break
         # for m in metrics_monitors.values():
         #     m.reset()
             
