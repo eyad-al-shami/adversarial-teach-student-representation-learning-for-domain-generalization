@@ -85,7 +85,7 @@ def training_validation_loop(cfg, logger):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
 
                 student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, student_optimizer, batch, epoch)
-                if (cfg.MODEL.TEACHER.UPDATE_TEACHER):
+                if (cfg.MODEL.TEACHER.UPDATE_TEACHER and epoch >= cfg.MODEL.TEACHER.WARMUP_EPOCHS):
                     teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
 
