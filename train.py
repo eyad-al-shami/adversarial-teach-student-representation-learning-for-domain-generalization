@@ -175,6 +175,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
 
     for epoch in range(cfg.MODEL.TEACHER.WARMUP_EPOCHS):
         with tqdm(train_loader, unit="batch") as tepoch:
+            m_monitor.reset()
             for data, domain, target in tepoch:
                 tepoch.set_description(f"Epoch {epoch}")
                 if (cfg.USE_CUDA):
