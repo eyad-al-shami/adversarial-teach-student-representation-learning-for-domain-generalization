@@ -6,7 +6,7 @@ DATASET:
   CLASSES: 7
   SOURCE_DOMAINS: ["art_painting", "cartoon", "photo"]
   TARGET_DOMAINS: ["sketch"]  
-  NORMALIZE: False
+  NORMALIZE: True
   NAME: "PACS"
   MEAN: [0.8158, 0.7974, 0.7717]
   STD: [0.2895, 0.3015, 0.3315]
@@ -21,7 +21,7 @@ MODEL:
     COMPUTE_MARGIN: True
   TEACHER:
     TAU: 0.999
-    WARMUP_EPOCHS: 15
+    WARMUP_EPOCHS: 30
     WARMUP_LR: 0.003
     BACKBONE_NAME: "resnet50"
   STUDENT:
