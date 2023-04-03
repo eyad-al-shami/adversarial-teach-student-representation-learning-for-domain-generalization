@@ -339,6 +339,9 @@ def test_model(cfg, model, classifier):
         _, predicted = torch.max(output.data, 1)
         total += batch[2].size(0)
         correct += (predicted == batch[2]).sum().item()
+
+    model.unfreeze()
+    classifier.unfreeze()
     return 100 * correct / total
 
 if __name__ == '__main__':
