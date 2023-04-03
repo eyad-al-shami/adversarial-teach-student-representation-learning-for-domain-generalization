@@ -14,7 +14,7 @@ LOGGING:
   EXPERIMENT_NAME: "testing warmup"
   LOGGER: "wandb"
 TRAIN:
-  BATCH_SIZE: 64
+  BATCH_SIZE: 32
 MODEL:
   AUGMENTER:
     LR: 0.0005
@@ -22,7 +22,7 @@ MODEL:
   TEACHER:
     TAU: 0.999
     WARMUP_EPOCHS: 30
-    WARMUP_LR: 0.003
+    WARMUP_LR: 0.05
     BACKBONE_NAME: "resnet50"
   STUDENT:
     BACKBONE_NAME: "resnet50"
