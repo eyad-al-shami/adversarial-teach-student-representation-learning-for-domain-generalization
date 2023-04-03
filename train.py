@@ -242,7 +242,8 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
 
     discrepancy = t_output_normalized - s_output_normalized
     # add a very tiny number to avoid nan
-    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean() + 1e-9
+    # remove the summation over the 1 dimension
+    discrepancy_loss = torch.pow(discrepancy, 2).mean() + 1e-9
     
     loss = torch.nn.functional.cross_entropy(classifier(s_output), batch[2]) + discrepancy_loss
     loss.backward()
@@ -321,22 +322,23 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
 
 
 # Testing funtions
-
+@torch.no_grad()
 def test_model(cfg, model, classifier):
     _, target_data_loader = get_dataset(cfg, domains=cfg.DATASET.TARGET_DOMAINS)
     model.eval()
     classifier.eval()
+    model.freeze()
+    classifier.freeze()
     correct = 0
     total = 0
-    with torch.no_grad():
-        for batch in target_data_loader:
-            if (cfg.USE_CUDA):
-                batch = [tensor.to(cfg.DEVICE) for tensor in batch]
-            output = model(batch[0])
-            output = classifier(output)
-            _, predicted = torch.max(output.data, 1)
-            total += batch[2].size(0)
-            correct += (predicted == batch[2]).sum().item()
+    for batch in target_data_loader:
+        if (cfg.USE_CUDA):
+            batch = [tensor.to(cfg.DEVICE) for tensor in batch]
+        output = model(batch[0])
+        output = classifier(output)
+        _, predicted = torch.max(output.data, 1)
+        total += batch[2].size(0)
+        correct += (predicted == batch[2]).sum().item()
     return 100 * correct / total
 
 if __name__ == '__main__':
