@@ -57,18 +57,6 @@ class PACS_DATASET(Dataset):
 		return image, domain, label
 
 def build_transforms(cfg, phase="train"):
-    # training_tfms = transforms.Compose([
-	#     transforms.CenterCrop(224),
-	#     transforms.RandomHorizontalFlip(),
-	#     # transforms.ColorJitter(brightness=.5, hue=.3),
-	#     transforms.ToTensor(),
-	#     # transforms.Normalize(mean=[0.8158, 0.7974, 0.7717], std=[0.2895, 0.3015, 0.3315]),
-	# ])
-	# basic_tfms = transforms.Compose([
-	#     transforms.CenterCrop(224),
-	#     transforms.ToTensor(),
-	#     # transforms.Normalize(mean=[0.8158, 0.7974, 0.7717], std=[0.2895, 0.3015, 0.3315]),
-	# ])
 	tfms_list = []
 
 	if phase == "train":
@@ -79,12 +67,12 @@ def build_transforms(cfg, phase="train"):
 		pass
 	elif phase == "warmup":
 		tfms_list.append(transforms.RandomHorizontalFlip())
+		# tfms_list.append(transforms.ColorJitter(brightness=.5, hue=.3))
 	
 	tfms_list.append(transforms.ToTensor())
 
 	if cfg.DATASET.NORMALIZE:
 		tfms_list.append(transforms.Normalize(mean=cfg.DATASET.MEAN, std=cfg.DATASET.STD))
-	
 	
 	tfms = transforms.Compose(tfms_list)
 	return tfms
