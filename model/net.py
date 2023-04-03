@@ -57,24 +57,22 @@ class Augmenter(nn.Module):
         output_nc,
         nc=32,
         n_blocks=3,
-        use_cgtx=False,
+        use_cgtx=True,
         norm_layer=nn.BatchNorm2d,
         use_dropout=False,
         padding_type="reflect",
     ):
         super().__init__()
 
-        backbone = []
-
-        p = 0
+        p=0
+        backbone = [nn.ReflectionPad2d(1)]
         backbone += [
-            # nn.ReflectionPad2d(1),
             nn.Conv2d(
-                input_nc, nc, kernel_size=1, stride=1, padding=p, bias=False
-            ),
-            norm_layer(nc),
-            nn.ReLU(True)
+                input_nc, nc, kernel_size=3, stride=1, padding=p, bias=False
+            )
         ]
+        backbone += [norm_layer(nc)]
+        backbone += [nn.ReLU(True)]
 
         for _ in range(n_blocks):
             backbone += [
@@ -83,39 +81,27 @@ class Augmenter(nn.Module):
                     padding_type=padding_type,
                     norm_layer=norm_layer,
                     use_dropout=use_dropout,
-                    use_bias=True,
+                    use_bias=False,
                 )
             ]
-
-        backbone += [
-                nn.Conv2d(
-                    nc, output_nc, kernel_size=1, stride=1, padding=p, bias=False
-                ),
-                nn.Tanh()
-            ]
-
         self.backbone = nn.Sequential(*backbone)
         
-        # self.gctx_fusion = nn.Sequential(
-        #     nn.Conv2d(
-        #         2 * nc, nc, kernel_size=1, stride=1, padding=0, bias=False
-        #     ),
-        #     norm_layer(nc),
-        #     nn.ReLU(True),
-        # )
+        self.gctx_fusion = nn.Sequential(
+            nn.Conv2d(
+                2 * nc, nc, kernel_size=1, stride=1, padding=0, bias=False
+            ),
+            norm_layer(nc),
+            nn.ReLU(True),
+        )
 
-        # self.regress = nn.Sequential(
-        #     nn.Conv2d(
-        #         nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
-        #     ),
-        #     nn.Sigmoid(),
-        # )
+        self.regress = nn.Sequential(
+            nn.Conv2d(
+                nc, output_nc, kernel_size=1, stride=1, padding=0, bias=False
+            ),
+            nn.Tanh(),
+        )
 
-        # self.use_gctx = use_cgtx
-        # print(f"build augmenter with gctx: {self.use_gctx}")
-
-
-        
+        self.use_gctx = use_cgtx
 
     def forward(self, x):
         """
@@ -127,18 +113,15 @@ class Augmenter(nn.Module):
         """
         input = x
         x = self.backbone(x)
-        return x
-        # if (self.use_gctx):
-        #     c = F.adaptive_avg_pool2d(x, (1, 1))
-        #     c = c.expand_as(x)
-        #     x = torch.cat([x, c], 1)
-        #     x = self.gctx_fusion(x)
+        if (self.use_gctx):
+            c = F.adaptive_avg_pool2d(x, (1, 1))
+            c = c.expand_as(x)
+            x = torch.cat([x, c], 1)
+            x = self.gctx_fusion(x)
 
-        # p = self.regress(x)
-        # if (self.use_gctx):
-        #     x_p = input + p
-        #     return x_p
-        # return p
+        p = self.regress(x)
+        x_p = input + p
+        return x_p
     
     def freeze(self):
         for p in self.parameters():
@@ -196,16 +179,14 @@ class ClassifierLayer(nn.Module):
         for p in self.parameters():
             p.requires_grad = True
 
-def build_augmenter(cfg):
-    # if (cfg.MODEL.AUGMENTER.NORM_LAYER == "IN"):
-    #     norm_layer = functools.partial(
-    #             nn.InstanceNorm2d, affine=False, track_running_stats=False
-    #         )
-    # else:
-    #     norm_layer = nn.BatchNorm2d
-    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=nn.BatchNorm2d, use_cgtx=cfg.MODEL.AUGMENTER.GTX)
+def build_augmenter():
+    norm_layer = functools.partial(
+            nn.InstanceNorm2d, affine=False, track_running_stats=False
+        )
+    net = Augmenter(3, 3, nc=64, n_blocks=3, norm_layer=norm_layer)
     # init_network_weights(net, init_type="normal", gain=0.02)
     return net
+
 class Metrics_Monitor():
     def __init__(self, cfg) -> None:
         self.metrics = {}

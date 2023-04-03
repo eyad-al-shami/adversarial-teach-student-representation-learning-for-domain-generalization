@@ -22,7 +22,7 @@ def create_componenets(cfg):
         3. The student model.
         4. The classification layer.
     """
-    augmenter = net.build_augmenter(cfg=cfg)
+    augmenter = net.build_augmenter()
     teacher = net.BackBone(cfg=cfg, component='teacher')
     student = net.BackBone(cfg=cfg, component='student')
     classifier = net.ClassifierLayer(cfg=cfg)
@@ -240,7 +240,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     # add a very tiny number to avoid nan
     discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean() + 1e-9
     
-    loss = (5 * torch.nn.functional.cross_entropy(classifier(s_output), batch[2])) + discrepancy_loss
+    loss = torch.nn.functional.cross_entropy(classifier(s_output), batch[2]) + discrepancy_loss
     loss.backward()
     optimizer.step()
 
@@ -303,7 +303,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
 
     cross_entropy = torch.nn.functional.cross_entropy(classifier(s_output), batch[2])
     
-    loss = (-margin_loss) + (5 * cross_entropy)
+    loss = -margin_loss + cross_entropy
     loss.backward()
     optimizer.step()
     
