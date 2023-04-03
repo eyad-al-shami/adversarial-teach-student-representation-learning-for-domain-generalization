@@ -175,6 +175,10 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
     merged_parameters = utils.merge_parameters([teacher, classifier])
 
     optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR)
+
+    lambda1 = lambda epoch: 0.65 ** epoch
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
+
     criterion = torch.nn.CrossEntropyLoss()
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
 
@@ -201,6 +205,8 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
             logger.write({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute()}, step=epoch)
             if cfg.DRY_RUN:
                 break
+        scheduler.step()
+
     optimizer.zero_grad()
     teacher.zero_grad()
     classifier.zero_grad()
