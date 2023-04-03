@@ -133,19 +133,19 @@ def update_teacher(teacher, student, keep_rate):
     student_model_dict = student.state_dict()
     new_teacher_dict = teacher.state_dict().copy()
 
-    if (cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS):
-        for key, value in teacher.state_dict().items():
-            if any(layer in key for layer in cfg.MODEL.TEACHER.ONLY_UPDATE_LAYERS):
-                new_teacher_dict[key] = (
-                    (student_model_dict[key] *
-                    (1 - keep_rate)) + (value * keep_rate)
-                )
-    else:
-        for key, value in teacher.state_dict().items():
-            new_teacher_dict[key] = (
-                (student_model_dict[key] *
-                (1 - keep_rate)) + (value * keep_rate)
-            )
+    # if (cfg.MODEL.TEACHER.UPDATE_SPECIFIC_LAYERS):
+    #     for key, value in teacher.state_dict().items():
+    #         if any(layer in key for layer in cfg.MODEL.TEACHER.ONLY_UPDATE_LAYERS):
+    #             new_teacher_dict[key] = (
+    #                 (student_model_dict[key] *
+    #                 (1 - keep_rate)) + (value * keep_rate)
+    #             )
+    # else:
+    for key, value in teacher.state_dict().items():
+        new_teacher_dict[key] = (
+            (student_model_dict[key] *
+            (1 - keep_rate)) + (value * keep_rate)
+        )
 
     teacher.load_state_dict(new_teacher_dict)
     return teacher
