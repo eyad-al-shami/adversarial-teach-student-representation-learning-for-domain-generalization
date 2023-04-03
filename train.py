@@ -233,8 +233,8 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     t_output = teacher(batch[0])
     s_output = student(augmentations)
 
-    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
-    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
+    t_output_normalized = t_output / t_output.norm(p=2, dim=1, keepdim=True)
+    s_output_normalized = s_output / s_output.norm(p=2, dim=1, keepdim=True)
 
     discrepancy = t_output_normalized - s_output_normalized
     # add a very tiny number to avoid nan
@@ -294,8 +294,8 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     s_output = student(augmented_data)
     t_output = teacher(batch[0])
 
-    t_output_normalized = torch.nn.functional.normalize(t_output, dim=1)
-    s_output_normalized = torch.nn.functional.normalize(s_output, dim=1)
+    t_output_normalized = t_output / t_output.norm(p=2, dim=1, keepdim=True)
+    s_output_normalized = s_output / s_output.norm(p=2, dim=1, keepdim=True)
 
     discrepancy = t_output_normalized - s_output_normalized
     discrepancy_loss = torch.pow(discrepancy, 2).sum(1)
