@@ -84,15 +84,12 @@ def training_validation_loop(cfg, logger):
                 if (cfg.USE_CUDA):
                     batch = [input_data.to(cfg.DEVICE) for input_data in batch]
 
-                student, rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, student_optimizer, batch, epoch)
+                rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, student_optimizer, batch, epoch)
                 # if (cfg.MODEL.TEACHER.UPDATE_TEACHER and epoch >= cfg.MODEL.TEACHER.WARMUP_EPOCHS):
                 teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
-                augmenter, aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
+                aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
 
                 with torch.no_grad():
-                    # print(f"RL Loss: {rl_loss}")
-                    # print(f"Augmenter Discrepancy Loss: {aug_D_loss}")
-                    # print(f"Augmenter CrossEntropy Loss: {aug_Ce_Loss}")
                     metrics_monitors["teacher_student_update_mm"].metrics["loss"](rl_loss)
                     metrics_monitors["augmenter_discrepancy_mm"].metrics["loss"](aug_D_loss)
                     metrics_monitors["augmenter_crossentropy_mm"].metrics["loss"](aug_Ce_Loss)
@@ -261,7 +258,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     augmenter.zero_grad()
     classifier.zero_grad()
     
-    return student, loss.item()
+    return loss.item()
 
 def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer, batch):
     ''''
@@ -324,7 +321,7 @@ def augmenter_batch_training(augmenter, teacher, student, classifier, optimizer,
     teacher.zero_grad()
     augmenter.zero_grad()
     classifier.zero_grad()
-    return augmenter, margin_loss.item(), cross_entropy.item()
+    return margin_loss.item(), cross_entropy.item()
 
 
 # Testing funtions
