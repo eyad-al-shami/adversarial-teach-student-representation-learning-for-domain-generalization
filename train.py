@@ -86,7 +86,7 @@ def training_validation_loop(cfg, logger):
 
                 rl_loss = teacher_studnet_batch_training(augmenter, teacher, student, classifier, student_optimizer, batch, epoch)
                 # if (cfg.MODEL.TEACHER.UPDATE_TEACHER and epoch >= cfg.MODEL.TEACHER.WARMUP_EPOCHS):
-                if (epoch % 3 == 0):
+                if (epoch % cfg.MODEL.TEACHER.UPDATE_EVERY == 0):
                     teacher = update_teacher(teacher, student, cfg.MODEL.TEACHER.TAU)
                 aug_D_loss, aug_Ce_Loss = augmenter_batch_training(augmenter, teacher, student, classifier, augmenter_optimizer, batch)
 
@@ -174,8 +174,8 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
 
     optimizer = optim.SGD(merged_parameters, lr=cfg.MODEL.TEACHER.WARMUP_LR)
 
-    # lambda1 = lambda epoch: 0.65 ** epoch
-    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
+    lambda1 = lambda epoch: cfg.MODEL.TEACHER.LEARNING_RATE_LAMBDA ** epoch
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda1)
 
     criterion = torch.nn.CrossEntropyLoss()
     _, train_loader = get_dataset(cfg, phase, domains=cfg.DATASET.SOURCE_DOMAINS)
@@ -203,7 +203,7 @@ def teacher_warmup(cfg, teacher, classifier, m_monitor, logger):
             logger.write({"warmup_loss": m_monitor.metrics["loss"].compute(), "warmup_acc": m_monitor.metrics["acc"].compute()}, step=epoch)
             if cfg.DRY_RUN:
                 break
-        # scheduler.step()
+        scheduler.step()
 
     optimizer.zero_grad()
     teacher.zero_grad()
