@@ -249,7 +249,7 @@ def teacher_studnet_batch_training(augmenter, teacher, student, classifier, opti
     discrepancy = t_output_normalized - s_output_normalized
     # add a very tiny number to avoid nan
     # remove the summation over the 1 dimension
-    discrepancy_loss = torch.pow(discrepancy, 2).mean() + 1e-9
+    discrepancy_loss = torch.pow(discrepancy, 2).sum(1).mean() + 1e-9
     
     loss = torch.nn.functional.cross_entropy(classifier(s_output), batch[2]) + discrepancy_loss
     loss.backward()
