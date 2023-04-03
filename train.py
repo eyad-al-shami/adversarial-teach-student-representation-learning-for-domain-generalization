@@ -113,6 +113,10 @@ def training_validation_loop(cfg, logger):
             
         student_accuracy = test_model(cfg, student, classifier)
         teacher_accuracy = test_model(cfg, teacher, classifier)
+        print("+"*50)
+        print(f"+      Teacher Accuracy: {teacher_accuracy}       +")
+        print(f"+      Student Accuracy: {student_accuracy}         +")
+        print("+"*50)
         logger.write({"teacher_acc": teacher_accuracy}, step=epoch)
         logger.write({"student_acc": student_accuracy}, step=epoch)
     return teacher, student, augmenter, classifier
